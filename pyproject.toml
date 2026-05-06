@@ -1,0 +1,88 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lasagnastack"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "Julian Wong", email = "julianwong2000@gmail.com" }
+]
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "setuptools>=80.9.0",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.2.0",
+    "pyrefly>=0.26.0",
+    "pytest>=7.2.0",
+    "ruff>=0.11.1",
+    "uv-sort==0.6.0",
+]
+notebook = [
+    "ipykernel>=6.30.0",
+    "ipython>=9.4.0",
+    "jupyterlab>=4.4.5",
+    "matplotlib>=3.10.3",
+    "nbconvert>=7.16.6",
+    "notebook>=7.4.4",
+    "plotly>=6.2.0",
+    "seaborn>=0.13.2",
+    "voila>=0.5.8",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+exclude = [
+    "build",
+    "dist",
+    "__pycache__",
+    "*.ipynb"
+]
+fix = true
+
+[tool.ruff.lint.pycodestyle]
+ignore-overlong-task-comments = true
+
+[tool.ruff.lint]
+# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`) codes by default.
+# Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
+# McCabe complexity (`C901`) by default.
+select = ["E4", "E7", "E9", "F", "I"]
+ignore = []
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+task-tags = ["HACK", "TODO"]
+
+[tool.pydocstyle]
+convention = "google"
+add-ignore = "D104,D418"
+
+[tool.pyrefly]
+# Set the directory Pyrefly will search for files to type check
+project-includes = ["src/lasagnastack/*"]
+project-excludes = ["**/*venv/**/*"]
+
+# Manually set the `sys.platform` Pyrefly will assume when type checking
+python-platform = "darwin"
+
+# Return an import error when `<library>-stubs` can be imported, but no non-stubs version of that library can be found
+ignore-missing-source = false
+
+# A table mapping error codes to an `is-enabled` boolean
+[tool.pyrefly.errors]
+# Disable `bad-assignment` errors
+bad-assignment = false
+# Disable `bad-return` errors
+bad-return = false
