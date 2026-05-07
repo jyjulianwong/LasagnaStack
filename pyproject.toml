@@ -5,14 +5,24 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lasagnastack"
 version = "0.1.0"
-description = "Add your description here"
+description = "AI pipeline: raw restaurant footage → editable CapCut draft"
 authors = [
     { name = "Julian Wong", email = "julianwong2000@gmail.com" }
 ]
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "av>=14.0.0",
+    "ffmpeg-python>=0.2.0",
+    "google-genai>=1.0.0",
+    "pycapcut>=0.0.3",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "opencv-python-headless>=4.0.0",
+    "scenedetect>=0.6.4",
     "setuptools>=80.9.0",
+    "structlog>=25.0.0",
+    "tenacity>=9.0.0",
 ]
 
 [dependency-groups]
