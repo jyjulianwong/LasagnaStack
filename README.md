@@ -1,6 +1,6 @@
 # LasagnaStack
 
-<img src="https://core-docs.s3.amazonaws.com/msd_of_warren_township_ar/article/image/3bc51f49-5695-4ef6-ba3a-c02207882a62.png" alt="LasagnaStack" width="180" />
+<img src="docs/lasagna.png" alt="LasagnaStack" width="180" />
 
 An AI pipeline that turns raw video clips into an editable CapCut draft for short-form video and reel editing.
 
