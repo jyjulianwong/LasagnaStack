@@ -6,21 +6,49 @@ from lasagnastack.stages import critique
 class TestBuildPrompt:
     def test_includes_brief_text(self, brief_path, fixture_cut_list, fixture_inventory):
         prompt = critique._build_prompt(
-            fixture_cut_list, [fixture_inventory], brief_path
+            fixture_cut_list, [fixture_inventory], brief_path, previous_issues=[]
         )
         assert "Test Kitchen" in prompt
 
     def test_includes_cut_list(self, brief_path, fixture_cut_list, fixture_inventory):
         prompt = critique._build_prompt(
-            fixture_cut_list, [fixture_inventory], brief_path
+            fixture_cut_list, [fixture_inventory], brief_path, previous_issues=[]
         )
         assert fixture_cut_list.cuts[0].source_segment_id in prompt
 
     def test_includes_segment_id(self, brief_path, fixture_cut_list, fixture_inventory):
         prompt = critique._build_prompt(
-            fixture_cut_list, [fixture_inventory], brief_path
+            fixture_cut_list, [fixture_inventory], brief_path, previous_issues=[]
         )
         assert fixture_inventory.segments[0].id in prompt
+
+    def test_first_iteration_signals_no_history(
+        self, brief_path, fixture_cut_list, fixture_inventory
+    ):
+        prompt = critique._build_prompt(
+            fixture_cut_list, [fixture_inventory], brief_path, previous_issues=[]
+        )
+        assert "first review" in prompt.lower()
+
+    def test_previous_issues_appear_in_prompt(
+        self, brief_path, fixture_cut_list, fixture_inventory
+    ):
+        issues = [["Duration too long", "Missing hook cut"]]
+        prompt = critique._build_prompt(
+            fixture_cut_list, [fixture_inventory], brief_path, previous_issues=issues
+        )
+        assert "Duration too long" in prompt
+        assert "Missing hook cut" in prompt
+
+    def test_multiple_iterations_all_appear(
+        self, brief_path, fixture_cut_list, fixture_inventory
+    ):
+        issues = [["Issue from iteration 0"], ["Issue from iteration 1"]]
+        prompt = critique._build_prompt(
+            fixture_cut_list, [fixture_inventory], brief_path, previous_issues=issues
+        )
+        assert "Issue from iteration 0" in prompt
+        assert "Issue from iteration 1" in prompt
 
 
 class TestCritiqueOnce:
@@ -33,6 +61,7 @@ class TestCritiqueOnce:
             brief_path,
             mock_client,
             iteration=0,
+            previous_issues=[],
         )
         assert len(mock_client.generate_calls) == 1
 
@@ -45,8 +74,25 @@ class TestCritiqueOnce:
             brief_path,
             mock_client,
             iteration=0,
+            previous_issues=[],
         )
         assert isinstance(result, CritiqueResult)
+
+    def test_passes_previous_issues_to_prompt(
+        self, brief_path, mock_client, fixture_cut_list, fixture_inventory
+    ):
+        issues = [["Hook cut missing", "Duration too short"]]
+        critique._critique_once(
+            fixture_cut_list,
+            [fixture_inventory],
+            brief_path,
+            mock_client,
+            iteration=1,
+            previous_issues=issues,
+        )
+        prompt = mock_client.generate_calls[0]["prompt"]
+        assert "Hook cut missing" in prompt
+        assert "Duration too short" in prompt
 
 
 class TestRun:
@@ -164,6 +210,30 @@ class TestRun:
             client=client,
         )
         assert result.model_dump() == fixture_critique_revise.cut_list_v2.model_dump()
+
+    def test_previous_issues_logged_in_next_iteration(
+        self,
+        brief_path,
+        tmp_path,
+        mock_llm_client_class,
+        fixture_critique_revise,
+        fixture_critique_approved,
+        fixture_cut_list,
+        fixture_inventory,
+    ):
+        client = mock_llm_client_class(
+            generate_responses=[fixture_critique_revise, fixture_critique_approved]
+        )
+        critique.run(
+            fixture_cut_list,
+            [fixture_inventory],
+            brief_path,
+            tmp_path,
+            max_retries=2,
+            client=client,
+        )
+        second_prompt = client.generate_calls[1]["prompt"]
+        assert fixture_critique_revise.issues[0] in second_prompt
 
     def test_zero_retries_skips_critique(
         self, brief_path, tmp_path, mock_client, fixture_cut_list, fixture_inventory

@@ -44,14 +44,18 @@ def run(
     if client is None:
         client = GeminiClient()
 
+    previous_issues: list[list[str]] = []
     for iteration in range(max_retries):
-        result = _critique_once(cut_list, inventories, brief_path, client, iteration)
+        result = _critique_once(
+            cut_list, inventories, brief_path, client, iteration, previous_issues
+        )
         io.write_json(result, io.critique_path(output_dir, iteration))
 
         if result.verdict == "approved" or result.cut_list_v2 is None:
             return cut_list
 
         log.info("critique_revising", iteration=iteration, issues=result.issues)
+        previous_issues.append(result.issues)
         cut_list = result.cut_list_v2
 
     if max_retries > 0:
@@ -65,8 +69,9 @@ def _critique_once(
     brief_path: Path,
     client: LLMClient,
     iteration: int,
+    previous_issues: list[list[str]],
 ) -> CritiqueResult:
-    prompt = _build_prompt(cut_list, inventories, brief_path)
+    prompt = _build_prompt(cut_list, inventories, brief_path, previous_issues)
     log.info("critique_start", iteration=iteration)
     result: CritiqueResult = client.generate(prompt, CritiqueResult, temperature=0.3)
     log.info(
@@ -82,6 +87,7 @@ def _build_prompt(
     cut_list: CutList,
     inventories: list[ClipInventory],
     brief_path: Path,
+    previous_issues: list[list[str]],
 ) -> str:
     template = (
         importlib.resources.files("lasagnastack.prompts")
@@ -90,10 +96,19 @@ def _build_prompt(
     )
     cut_list_json = json.dumps(cut_list.model_dump(by_alias=True), indent=2)
     inventories_json = json.dumps([inv.model_dump() for inv in inventories], indent=2)
+    if previous_issues:
+        issues_lines = [
+            f"Iteration {i}: {'; '.join(issues) if issues else 'none'}"
+            for i, issues in enumerate(previous_issues)
+        ]
+        previous_issues_text = "\n".join(issues_lines)
+    else:
+        previous_issues_text = "None — this is the first review."
     return template.format(
         brief_text=brief_path.read_text(encoding="utf-8").strip(),
         inventories_json=inventories_json,
         cut_list_json=cut_list_json,
+        previous_issues=previous_issues_text,
     )
 
 

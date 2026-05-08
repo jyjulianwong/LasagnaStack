@@ -9,6 +9,9 @@ AVAILABLE SEGMENTS (for reference when revising)
 CUT LIST UNDER REVIEW
 {cut_list_json}
 
+PREVIOUS ITERATION ISSUES — do not reintroduce any of these in cut_list_v2
+{previous_issues}
+
 REVIEW CRITERIA — check each and report failures as issues
 1. Duration     Sum of Cut.duration_sec must be 30–60 seconds.
 2. Cut count    8–15 cuts.
