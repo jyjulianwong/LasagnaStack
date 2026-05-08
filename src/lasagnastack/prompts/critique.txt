@@ -10,7 +10,7 @@ CUT LIST UNDER REVIEW
 {cut_list_json}
 
 REVIEW CRITERIA — check each and report failures as issues
-1. Duration     Sum of Cut.duration_sec must be 55–65 seconds.
+1. Duration     Sum of Cut.duration_sec must be 30–60 seconds.
 2. Cut count    8–15 cuts.
 3. Opening      First cut must have role "hook".
 4. Shot variety No more than 2 consecutive cuts with the same shot_type.

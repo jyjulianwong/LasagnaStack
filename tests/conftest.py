@@ -1,3 +1,5 @@
+import os
+from collections.abc import Generator
 from pathlib import Path
 
 import ffmpeg
@@ -14,6 +16,29 @@ from lasagnastack.models.inventory import (
     OverallAssessment,
     Segment,
 )
+
+# ── MLflow isolation ────────────────────────────────────────────────────────
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _mlflow_tmp_tracking(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Generator[None, None, None]:
+    """Redirect MLflow to a temporary directory for the entire test session.
+
+    Prevents tests from writing to a real MLflow server or polluting the
+    project-level ``mlruns/`` folder. Mirrors the ``no_capcut`` pattern used
+    to isolate CapCut writes.
+    """
+    mlruns = tmp_path_factory.mktemp("mlruns")
+    original = os.environ.get("MLFLOW_TRACKING_URI")
+    os.environ["MLFLOW_TRACKING_URI"] = str(mlruns)
+    yield
+    if original is None:
+        os.environ.pop("MLFLOW_TRACKING_URI", None)
+    else:
+        os.environ["MLFLOW_TRACKING_URI"] = original
+
 
 # ── shared fixture data ──────────────────────────────────────────────────────
 
@@ -67,7 +92,7 @@ FIXTURE_CUT = Cut(  # pyrefly: ignore[missing-argument]
 
 FIXTURE_CUT_LIST = CutList(
     reel_meta=ReelMeta(
-        restaurant="Test Restaurant",
+        title="Test Restaurant",
         target_duration_sec=60.0,
         aspect_ratio="9:16",
         tone="vibrant",
@@ -87,7 +112,7 @@ FIXTURE_CRITIQUE_APPROVED = CritiqueResult(
 
 FIXTURE_CRITIQUE_REVISE = CritiqueResult(
     verdict="revise",
-    issues=["Duration is only 2.5s, target is 55–65s."],
+    issues=["Duration is only 2.5s, target is 30–60s."],
     cut_list_v2=FIXTURE_CUT_LIST,
 )
 

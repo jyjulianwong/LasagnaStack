@@ -113,7 +113,7 @@ class TestRun:
         self, raw_clip, tmp_path, fixture_cut_list
     ):
         result = render.run(fixture_cut_list, tmp_path, raw_clip.parent)
-        expected = render._draft_folder_name(fixture_cut_list.reel_meta.restaurant)
+        expected = render._draft_folder_name(fixture_cut_list.reel_meta.title)
         assert result.name == expected
 
     def test_draft_info_json_has_display_name(
@@ -121,7 +121,7 @@ class TestRun:
     ):
         result = render.run(fixture_cut_list, tmp_path, raw_clip.parent)
         content = json.loads((result / "draft_info.json").read_text())
-        expected = render._draft_display_name(fixture_cut_list.reel_meta.restaurant)
+        expected = render._draft_display_name(fixture_cut_list.reel_meta.title)
         assert content["name"] == expected
 
     def test_allow_replace_overwrites_existing(

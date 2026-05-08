@@ -66,13 +66,13 @@ GEMINI_API_KEY=your-key-here
 Prepare an input folder containing your MP4/MOV clips and exactly one `.txt` brief file, then run:
 
 ```bash
-uv run python -m lasagnastack make ./my_clips/ --out ./drafts/restaurant_2025_05_05
+uv run python -m lasagnastack make ./my_clips/ --out ./drafts/reel_2025_05_05
 ```
 
 The pipeline pauses for confirmation between each stage. To skip all prompts:
 
 ```bash
-uv run python -m lasagnastack make ./my_clips/ --out ./drafts/restaurant_2025_05_05 --yes
+uv run python -m lasagnastack make ./my_clips/ --out ./drafts/reel_2025_05_05 --yes
 ```
 
 Full CLI reference:
@@ -98,23 +98,51 @@ If CapCut Desktop is installed, the pipeline automatically:
 3. Rewrites the timeline clip paths in `draft_info.json` to point to the copied files
 4. Registers the draft in `root_meta_info.json` so it appears on the CapCut home screen straight away
 
-Open CapCut Desktop after the pipeline finishes — the draft will appear on the home screen under your local projects with all media already linked. Drafts are named **LasagnaStack - Restaurant Name** and use that same string as the folder name so they are easy to identify among existing projects.
+Open CapCut Desktop after the pipeline finishes — the draft will appear on the home screen under your local projects with all media already linked. Drafts are named **LasagnaStack - Reel Name** and use that same string as the folder name so they are easy to identify among existing projects.
 
-If CapCut is not installed, the draft is written to `<output_dir>/draft/LasagnaStack - {restaurant}/` and you can copy it manually.
+If CapCut is not installed, the draft is written to `<output_dir>/draft/LasagnaStack - {reel_name}/` and you can copy it manually.
+
+## Track LLM costs with MLflow
+
+Every pipeline run is automatically traced with [MLflow](https://mlflow.org). Each Gemini API call is recorded as a span (prompt, response, token counts, latency, and estimated USD cost). Session-level totals are written to the run when the pipeline finishes.
+
+**1. Start the MLflow server** (in a separate terminal, before running the pipeline):
+
+```bash
+mlflow server --host 127.0.0.1 --port 5001
+```
+
+> **macOS note:** port 5000 is reserved by AirPlay Receiver. Use 5001 or higher.
+
+**2. Add the tracking variables to `.env`:**
+
+```
+MLFLOW_TRACKING_URI=http://localhost:5001
+MLFLOW_EXPERIMENT_NAME=lasagnastack
+```
+
+**3. Run the pipeline as normal.** Open `http://localhost:5000` in your browser to watch live.
+
+- **Traces tab** — individual LLM call spans appear in real time as stages progress.
+- **Metrics tab** — `total_input_tokens`, `total_output_tokens`, `total_cost_usd`, and `llm_call_count` are written once the run completes.
+
+Runs are named `lasagnastack-{brief_stem}-{4-char-id}` and tagged with the model, reel name, and `max_critique_retries`.
+
+> **No server?** Set `MLFLOW_TRACKING_URI=mlruns` to write results to a local folder instead, then view them with `mlflow ui`.
 
 ## Configuration
 
 | Parameter | How to set | Default |
 |---|---|---|
 | Gemini API key | `GEMINI_API_KEY` env var (required) | — |
-| Gemini model | `LASAGNASTACK_MODEL` env var | `gemini-2.5-flash` |
+| LLM model | `LASAGNASTACK_LLM_MODEL` env var | `gemini/gemini-2.5-flash` |
 | Critique loop cap | `--max-critique-retries` CLI flag | `2` |
 | Output resolution | `_TARGET_WIDTH` / `_TARGET_HEIGHT` in `src/lasagnastack/stages/ingest.py` | `720×1280` |
 
 Example — run with a different model:
 
 ```bash
-LASAGNASTACK_MODEL=gemini-2.5-pro \
+LASAGNASTACK_LLM_MODEL=gemini/gemini-2.5-pro \
   uv run python -m lasagnastack make ./my_clips/ --out ./drafts/test
 ```
 

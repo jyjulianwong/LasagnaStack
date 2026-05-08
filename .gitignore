@@ -161,3 +161,7 @@ CLAUDE.md
 # Project stuff
 data/
 *.prof
+
+# MLflow
+mlflow.db
+mlruns/

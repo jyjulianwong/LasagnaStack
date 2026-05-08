@@ -37,7 +37,7 @@ def run(cut_list: CutList, output_dir: Path, input_dir: Path) -> Path:
     """Translate the final cut list into a pyCapCut draft folder.
 
     Uses original source clips (not normalised) for full resolution.
-    Draft written to output_dir/draft/<restaurant_name>/, then copied into
+    Draft written to output_dir/draft/<reel_name>/, then copied into
     the CapCut local drafts directory with source clips embedded alongside
     the draft JSON so CapCut opens it without missing-media errors.
 
@@ -53,9 +53,9 @@ def run(cut_list: CutList, output_dir: Path, input_dir: Path) -> Path:
     draft_parent = io.draft_dir(output_dir)
     draft_parent.mkdir(parents=True, exist_ok=True)
 
-    restaurant = cut_list.reel_meta.restaurant
-    folder_name = _draft_folder_name(restaurant)
-    display_name = _draft_display_name(restaurant)
+    title = cut_list.reel_meta.title
+    folder_name = _draft_folder_name(title)
+    display_name = _draft_display_name(title)
     script = DraftFolder(str(draft_parent)).create_draft(
         folder_name, _DRAFT_WIDTH, _DRAFT_HEIGHT, _DRAFT_FPS, allow_replace=True
     )
@@ -134,12 +134,12 @@ def run(cut_list: CutList, output_dir: Path, input_dir: Path) -> Path:
     return final_path
 
 
-def _draft_display_name(restaurant: str) -> str:
-    return f"{_PREFIX} - {restaurant}"
+def _draft_display_name(title: str) -> str:
+    return f"{_PREFIX} - {title}"
 
 
-def _draft_folder_name(restaurant: str) -> str:
-    return _draft_display_name(restaurant)
+def _draft_folder_name(title: str) -> str:
+    return _draft_display_name(title)
 
 
 def _display_dimensions(path: Path) -> tuple[int, int]:

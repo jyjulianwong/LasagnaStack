@@ -9,7 +9,7 @@ All available segments are listed below as JSON. Each segment is identified by i
 {inventories_json}
 
 EDITING RULES
-- Total duration: the sum of all Cut.duration_sec values must be 55–65 seconds.
+- Total duration: the sum of all Cut.duration_sec values must be 30–60 seconds.
 - Use 8–15 cuts. Hook cuts ≤ 2s; mid-reel cuts 3–5s; final cut 4–8s.
 - Open with the segment that has the highest hook_potential. Build to a payoff (dish reveal or eating reaction). End memorably.
 - Prefer vertical_crop_safe: true segments. Only use false if no alternative exists for that role.

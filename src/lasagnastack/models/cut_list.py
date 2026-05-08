@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 
 
 class ReelMeta(BaseModel):
-    restaurant: str
+    title: str
     target_duration_sec: float
     aspect_ratio: str
     tone: str

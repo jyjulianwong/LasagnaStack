@@ -75,7 +75,7 @@ flowchart TD
 flowchart TD
     START(["Approved CutList"])
 
-    INIT["Create pyCapCut DraftFolder\nfolder: lasagnastack_{slug}\ndisplay name: LasagnaStack - {restaurant}"]
+    INIT["Create pyCapCut DraftFolder\nfolder: lasagnastack_{slug}\ndisplay name: LasagnaStack - {slug}"]
 
     MATERIAL["VideoMaterial\nprobe source clip with pymediainfo\n(original HD — not normalised)"]
     CROP["Compute CropSettings\n9:16 portrait crop from landscape source\ncenter / left_third / right_third + offset_x nudge"]
