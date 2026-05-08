@@ -155,6 +155,7 @@ crash.log
 # IDEs
 .cursorrules
 .claude/
+.cursor/
 CLAUDE.md
 
 # Project stuff
