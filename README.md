@@ -17,7 +17,7 @@ where...
 
 The pipeline runs in five sequential stages: **ingest** (uses ffmpeg) → **analyse** (uses LLM) → **direct** (uses LLM) → **critique loop** (uses LLM) → **render** (uses pyCapCut).
 
-Each stage is a subclass of the `Stage` abstract base class (`base.py`). Adding, removing, or reordering stages requires only editing the `stages` list in `ReelPipeline`. See `CLAUDE.md` for the full architecture guide.
+Each stage is a subclass of the `Stage` abstract base class (`base.py`). Adding, removing, or reordering stages requires only editing the `stages` list in `ReelPipeline`. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the full architecture guide.
 
 ## Get started with development
 
@@ -94,13 +94,13 @@ options:
 If CapCut Desktop is installed, the pipeline automatically:
 
 1. Detects `~/Movies/CapCut/User Data/`
-2. Copies your source clips into the CapCut draft folder (so all media is self-contained)
-3. Rewrites the clip paths in `draft_content.json` to point to the copied files
-4. Copies the draft into `~/Movies/CapCut/User Data/Projects/com.lveditor.draft/`
+2. Copies **all** `.mp4`/`.mov` files from your input folder into the CapCut draft folder — including clips not used on the timeline — so they are immediately available in CapCut's import panel
+3. Rewrites the timeline clip paths in `draft_info.json` to point to the copied files
+4. Registers the draft in `root_meta_info.json` so it appears on the CapCut home screen straight away
 
-Open CapCut Desktop after the pipeline finishes — the draft will appear on the home screen under your local projects with all media already linked. Drafts are named **LasagnaStack - Restaurant Name** and their folders are prefixed `lasagnastack_` so they are easy to identify among existing projects.
+Open CapCut Desktop after the pipeline finishes — the draft will appear on the home screen under your local projects with all media already linked. Drafts are named **LasagnaStack - Restaurant Name** and use that same string as the folder name so they are easy to identify among existing projects.
 
-If CapCut is not installed, the draft is written to `<output_dir>/draft/lasagnastack_{slug}/` and you can copy it manually.
+If CapCut is not installed, the draft is written to `<output_dir>/draft/LasagnaStack - {restaurant}/` and you can copy it manually.
 
 ## Configuration
 
@@ -149,4 +149,4 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for four annotated diagrams covering th
 - The pipeline is modularlised into stages, with each stage being responsible for transforming the global state of the pipeline run (similar to Google ADK). It is easy to add, remove, or reorder stages.
 - Human-in-the-loop is deeply integrated in the design, with each stage prompting the user for confirmation before proceeding to the next stage.
 - Prompt caching is enabled to avoid unnecessary LLM calls to reduce latency and cost.
-- The tool is deeply integrated with its host machine. It auto-detects CapCut Desktop, copies source media into the draft folder, and rewrites all paths so the project opens in CapCut with no missing-media errors and no manual steps.
+- The tool is deeply integrated with its host machine. It auto-detects CapCut Desktop, copies all source media (timeline clips and unused footage) into the draft folder, rewrites paths in `draft_info.json`, and registers the project in CapCut's local project registry — so the draft opens in CapCut with no missing-media errors, no manual steps, and all your raw clips already in the import panel.

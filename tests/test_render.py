@@ -13,18 +13,17 @@ class TestDraftNaming:
     def test_display_name_has_prefix(self):
         assert render._draft_display_name("Hana Don") == "LasagnaStack - Hana Don"
 
-    def test_folder_name_is_lowercase_slug(self):
-        assert render._draft_folder_name("Hana Don") == "lasagnastack_hana_don"
+    def test_folder_name_matches_display_name(self):
+        assert render._draft_folder_name("Hana Don") == "LasagnaStack - Hana Don"
 
-    def test_folder_name_collapses_spaces(self):
-        assert render._draft_folder_name("Test  Kitchen") == "lasagnastack_test_kitchen"
+    def test_folder_name_preserves_spaces(self):
+        assert render._draft_folder_name("Test  Kitchen") == "LasagnaStack - Test  Kitchen"
 
-    def test_folder_name_strips_special_chars(self):
-        # \w keeps Unicode letters (é stays), only punctuation/spaces become _
-        assert render._draft_folder_name("Café & Bar") == "lasagnastack_café_bar"
+    def test_folder_name_preserves_special_chars(self):
+        assert render._draft_folder_name("Café & Bar") == "LasagnaStack - Café & Bar"
 
     def test_folder_name_prefix(self):
-        assert render._draft_folder_name("X").startswith("lasagnastack_")
+        assert render._draft_folder_name("X").startswith("LasagnaStack - ")
 
 
 class TestParseTimestamp:
@@ -44,38 +43,32 @@ class TestParseTimestamp:
         assert render._parse_timestamp("01:05.5") == int(65.5 * SEC)
 
 
-class TestMakeCropSettings:
-    def test_landscape_center_is_symmetric(self):
-        crop = CropHint(mode="center", offset_x=0.0)
-        s = render._make_crop_settings(crop, 1920, 1080)
-        assert s.upper_left_x == pytest.approx(1.0 - s.upper_right_x)
+class TestMakeClipSettings:
+    def test_landscape_center_no_shift(self):
+        clip = render._make_clip_settings(CropHint(mode="center", offset_x=0.0), 1920, 1080, 1080, 1920)
+        assert clip.transform_x == pytest.approx(0.0)
 
-    def test_landscape_left_third_starts_at_zero(self):
-        crop = CropHint(mode="left_third", offset_x=0.0)
-        s = render._make_crop_settings(crop, 1920, 1080)
-        assert s.upper_left_x == pytest.approx(0.0)
+    def test_landscape_left_third_positive_shift(self):
+        clip = render._make_clip_settings(CropHint(mode="left_third", offset_x=0.0), 1920, 1080, 1080, 1920)
+        assert clip.transform_x > 0.0
 
-    def test_landscape_right_third_ends_at_one(self):
-        crop = CropHint(mode="right_third", offset_x=0.0)
-        s = render._make_crop_settings(crop, 1920, 1080)
-        assert s.upper_right_x == pytest.approx(1.0)
+    def test_landscape_right_third_negative_shift(self):
+        clip = render._make_clip_settings(CropHint(mode="right_third", offset_x=0.0), 1920, 1080, 1080, 1920)
+        assert clip.transform_x < 0.0
 
-    def test_portrait_source_no_crop(self):
-        crop = CropHint(mode="center", offset_x=0.0)
-        s = render._make_crop_settings(crop, 1080, 1920)
-        assert s.upper_left_x == pytest.approx(0.0)
-        assert s.upper_right_x == pytest.approx(1.0)
+    def test_left_and_right_are_symmetric(self):
+        left = render._make_clip_settings(CropHint(mode="left_third", offset_x=0.0), 1920, 1080, 1080, 1920)
+        right = render._make_clip_settings(CropHint(mode="right_third", offset_x=0.0), 1920, 1080, 1080, 1920)
+        assert left.transform_x == pytest.approx(-right.transform_x)
 
-    def test_top_bottom_unchanged(self):
-        crop = CropHint(mode="center", offset_x=0.0)
-        s = render._make_crop_settings(crop, 1920, 1080)
-        assert s.upper_left_y == 0.0
-        assert s.lower_left_y == 1.0
+    def test_portrait_source_no_shift(self):
+        clip = render._make_clip_settings(CropHint(mode="center", offset_x=0.0), 1080, 1920, 1080, 1920)
+        assert clip.transform_x == pytest.approx(0.0)
 
     def test_offset_shifts_center(self):
-        base = render._make_crop_settings(CropHint(mode="center", offset_x=0.0), 1920, 1080)
-        shifted = render._make_crop_settings(CropHint(mode="center", offset_x=0.5), 1920, 1080)
-        assert shifted.upper_left_x > base.upper_left_x
+        base = render._make_clip_settings(CropHint(mode="center", offset_x=0.0), 1920, 1080, 1080, 1920)
+        shifted = render._make_clip_settings(CropHint(mode="center", offset_x=0.5), 1920, 1080, 1080, 1920)
+        assert shifted.transform_x > base.transform_x
 
 
 @pytest.fixture(autouse=True)
@@ -94,18 +87,18 @@ class TestRun:
         result = render.run(FIXTURE_CUT_LIST, tmp_path, raw_clip.parent)
         assert result.parent == io.draft_dir(tmp_path)
 
-    def test_draft_contains_content_json(self, raw_clip, tmp_path):
+    def test_draft_contains_info_json(self, raw_clip, tmp_path):
         result = render.run(FIXTURE_CUT_LIST, tmp_path, raw_clip.parent)
-        assert (result / "draft_content.json").exists()
+        assert (result / "draft_info.json").exists()
 
-    def test_draft_folder_name_is_slug(self, raw_clip, tmp_path):
+    def test_draft_folder_name_is_display_name(self, raw_clip, tmp_path):
         result = render.run(FIXTURE_CUT_LIST, tmp_path, raw_clip.parent)
         expected = render._draft_folder_name(FIXTURE_CUT_LIST.reel_meta.restaurant)
         assert result.name == expected
 
-    def test_draft_content_json_has_display_name(self, raw_clip, tmp_path):
+    def test_draft_info_json_has_display_name(self, raw_clip, tmp_path):
         result = render.run(FIXTURE_CUT_LIST, tmp_path, raw_clip.parent)
-        content = json.loads((result / "draft_content.json").read_text())
+        content = json.loads((result / "draft_info.json").read_text())
         expected = render._draft_display_name(FIXTURE_CUT_LIST.reel_meta.restaurant)
         assert content["name"] == expected
 
@@ -178,7 +171,7 @@ class TestExportToCapCut:
         assert dest is not None
         assert (dest / FIXTURE_CUT.source_file).exists()
 
-    def test_paths_rewritten_in_content_json(self, raw_clip, tmp_path):
+    def test_paths_rewritten_in_info_json(self, raw_clip, tmp_path):
         fake_capcut = tmp_path / "CapCut" / "User Data"
         capcut_drafts = fake_capcut / "Projects" / "com.lveditor.draft"
         capcut_drafts.mkdir(parents=True)
@@ -191,7 +184,7 @@ class TestExportToCapCut:
             dest = render._export_to_capcut(draft_path, raw_clip.parent, FIXTURE_CUT_LIST)
 
         assert dest is not None
-        content = json.loads((dest / "draft_content.json").read_text())
+        content = json.loads((dest / "draft_info.json").read_text())
         paths = [v["path"] for v in content["materials"]["videos"]]
         assert all(p.startswith(str(dest)) for p in paths)
 
@@ -216,3 +209,38 @@ class TestExportToCapCut:
             dest = render._export_to_capcut(draft_path, raw_clip.parent, FIXTURE_CUT_LIST)
 
         assert dest is not None and dest.exists()
+
+    def test_extra_clips_copied_and_in_import_panel(self, raw_clip, tmp_path):
+        """Clips in the input folder but absent from the cut list are copied
+        and listed in draft_meta_info.json so CapCut shows them in the import
+        panel."""
+        import unittest.mock as mock
+
+        # Add a second clip to the input folder that is NOT in the cut list.
+        import shutil
+        extra_clip = raw_clip.parent / "extra_clip.mp4"
+        shutil.copy2(raw_clip, extra_clip)
+
+        fake_capcut = tmp_path / "CapCut" / "User Data"
+        capcut_drafts = fake_capcut / "Projects" / "com.lveditor.draft"
+        capcut_drafts.mkdir(parents=True)
+
+        with mock.patch.object(render, "_find_capcut_user_data", return_value=None):
+            draft_path = render.run(FIXTURE_CUT_LIST, tmp_path / "out", raw_clip.parent)
+
+        with mock.patch.object(render, "_find_capcut_user_data", return_value=fake_capcut):
+            dest = render._export_to_capcut(draft_path, raw_clip.parent, FIXTURE_CUT_LIST)
+
+        assert dest is not None
+        # Extra clip was physically copied.
+        assert (dest / "extra_clip.mp4").exists()
+        # Extra clip appears in draft_meta_info.json import panel.
+        import json
+        meta = json.loads((dest / "draft_meta_info.json").read_text())
+        imported_names = {
+            entry["extra_info"]
+            for dm in meta.get("draft_materials", [])
+            if dm.get("type") == 0
+            for entry in dm.get("value", [])
+        }
+        assert "extra_clip.mp4" in imported_names
