@@ -1,5 +1,6 @@
 import hashlib
 import os
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -17,10 +18,12 @@ from lasagnastack.llm.base import LLMClient
 
 log = structlog.get_logger()
 
+# Number of follow-up re-prompts when Gemini returns malformed JSON before raising.
 _MAX_JSON_RETRIES = 2
-_FILE_POLL_INTERVAL_S = 3
+# Seconds between status polls while waiting for an uploaded file to become ACTIVE.
+_FILE_POLL_INTERVAL_SEC = 3
 # Truncate logged prompt text to keep MLflow traces a reasonable size.
-_MAX_PROMPT_LOG_CHARS = 4000
+_MAX_PROMPT_LOG_CHARS = 10000
 
 # USD cost per 1 million tokens: {model_prefix: (input_cost, output_cost)}.
 # Matched by longest prefix so more-specific entries take priority.
@@ -110,6 +113,7 @@ class GeminiClient(LLMClient):
         self._total_output_tokens: int = 0
         self._total_cost_usd: float = 0.0
         self._call_count: int = 0
+        self._stats_lock = threading.Lock()
 
     # ── public interface ────────────────────────────────────────────────────
 
@@ -207,7 +211,7 @@ class GeminiClient(LLMClient):
         # Poll until ACTIVE; files go through PROCESSING before becoming usable
         while getattr(getattr(file_ref, "state", None), "name", None) == "PROCESSING":
             log.debug("files_waiting", name=file_ref.name)
-            time.sleep(_FILE_POLL_INTERVAL_S)
+            time.sleep(_FILE_POLL_INTERVAL_SEC)
             file_ref = self._client.files.get(
                 name=file_ref.name  # pyrefly: ignore[bad-argument-type]
             )
@@ -304,11 +308,11 @@ class GeminiClient(LLMClient):
                 }
             )
 
-        # Update instance accumulators after a successful call.
-        self._total_input_tokens += input_tokens
-        self._total_output_tokens += output_tokens
-        self._total_cost_usd += total_cost
-        self._call_count += 1
+        with self._stats_lock:
+            self._total_input_tokens += input_tokens
+            self._total_output_tokens += output_tokens
+            self._total_cost_usd += total_cost
+            self._call_count += 1
 
         log.info(
             "llm_response",

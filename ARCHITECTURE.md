@@ -135,7 +135,7 @@ classDiagram
         +input_dir Path
         +output_dir Path
         +brief_path Path
-        +max_critique_retries int
+        +critique_max_retries int
         +normalised_clips list[NormalisedClip]
         +inventories list[ClipInventory]
         +cut_list CutList

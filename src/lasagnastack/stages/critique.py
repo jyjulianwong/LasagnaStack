@@ -124,7 +124,7 @@ class CritiqueStage(Stage):
             state.inventories,
             state.brief_path,
             state.output_dir,
-            max_retries=state.max_critique_retries,
+            max_retries=state.critique_max_retries,
             client=self._client,
         )
         return dataclasses.replace(state, cut_list=cut_list)

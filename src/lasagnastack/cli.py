@@ -16,11 +16,25 @@ def _build_parser() -> argparse.ArgumentParser:
         "--yes", "-y", action="store_true", help="Auto-confirm all stage prompts."
     )
     make.add_argument(
-        "--max-critique-retries",
+        "--critique-max-retries",
         type=int,
         default=2,
         metavar="N",
         help="Maximum critique-loop iterations (default: 2).",
+    )
+    make.add_argument(
+        "--ingest-max-workers",
+        type=int,
+        default=1,
+        metavar="N",
+        help="Parallel worker processes for Stage 1 — ingest (default: 1).",
+    )
+    make.add_argument(
+        "--analyse-max-workers",
+        type=int,
+        default=4,
+        metavar="N",
+        help="Concurrent LLM calls for Stage 2 — analyse (default: 4).",
     )
 
     return parser
@@ -45,5 +59,7 @@ def main() -> None:
             input_dir=args.input_dir,
             output_dir=args.out,
             auto_confirm=args.yes,
-            max_critique_retries=args.max_critique_retries,
+            critique_max_retries=args.critique_max_retries,
+            ingest_max_workers=args.ingest_max_workers,
+            analyse_max_workers=args.analyse_max_workers,
         )

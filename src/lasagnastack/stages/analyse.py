@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 import importlib.resources
 from pathlib import Path
@@ -18,10 +19,32 @@ from lasagnastack.models.inventory import (
 log = structlog.get_logger()
 
 
+async def _analyse_clip_async(
+    clip: NormalisedClip,
+    cache: DiskCache,
+    client: LLMClient,
+    semaphore: asyncio.Semaphore,
+) -> ClipInventory:
+    async with semaphore:
+        return await asyncio.to_thread(_analyse_clip, clip, cache, client)
+
+
+async def _run_async(
+    clips: list[NormalisedClip],
+    cache: DiskCache,
+    client: LLMClient,
+    max_workers: int,
+) -> list[ClipInventory]:
+    semaphore = asyncio.Semaphore(max_workers)
+    tasks = [_analyse_clip_async(clip, cache, client, semaphore) for clip in clips]
+    return list(await asyncio.gather(*tasks))
+
+
 def run(
     clips: list[NormalisedClip],
     output_dir: Path,
     client: LLMClient | None = None,
+    max_workers: int = 4,
 ) -> list[ClipInventory]:
     """Analyse each normalised clip with Gemini; cache results by content hash.
 
@@ -30,6 +53,9 @@ def run(
         output_dir: Pipeline root; cache lives at output_dir/.cache,
             inventories written to output_dir/inventories/.
         client: LLM client to use. Defaults to GeminiClient.
+        max_workers: Maximum number of concurrent LLM calls. Uses
+            ``asyncio.gather`` with a semaphore; all calls run as threads
+            via ``asyncio.to_thread`` since the LLM client is synchronous.
 
     Returns:
         One ClipInventory per clip, in the same order as clips.
@@ -38,11 +64,11 @@ def run(
         client = GeminiClient()
 
     cache = DiskCache(io.cache_dir(output_dir))
-    inventories = []
-    for clip in clips:
-        inventory = _analyse_clip(clip, cache, client)
+    inventories = asyncio.run(_run_async(clips, cache, client, max_workers))
+
+    for clip, inventory in zip(clips, inventories):
         io.write_json(inventory, io.inventory_path(output_dir, clip.source_path.name))
-        inventories.append(inventory)
+
     return inventories
 
 
@@ -89,12 +115,24 @@ def _load_prompt(source_file: str, duration_sec: float) -> str:
 
 
 class AnalyseStage(Stage):
-    def __init__(self, client: LLMClient | None = None) -> None:
+    def __init__(self, client: LLMClient | None = None, max_workers: int = 4) -> None:
+        """Initialise AnalyseStage.
+
+        Args:
+            client: LLM client to use. Defaults to GeminiClient.
+            max_workers: Maximum number of concurrent LLM calls.
+        """
         self._client = client
+        self._max_workers = max_workers
 
     def run(self, state: PipelineState) -> PipelineState:
         assert state.normalised_clips is not None
-        inventories = run(state.normalised_clips, state.output_dir, self._client)
+        inventories = run(
+            state.normalised_clips,
+            state.output_dir,
+            self._client,
+            max_workers=self._max_workers,
+        )
         return dataclasses.replace(state, inventories=inventories)
 
     def completion_message(self, state: PipelineState) -> str:

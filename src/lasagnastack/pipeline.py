@@ -102,7 +102,7 @@ def mlflow_tracked(
         tags = {
             "model": os.getenv("LASAGNASTACK_LLM_MODEL", "gemini/gemini-2.5-flash"),
             "brief_path": state.brief_path.stem,
-            "max_critique_retries": str(state.max_critique_retries),
+            "critique_max_retries": str(state.critique_max_retries),
         }
 
         span_name = f"{type(self).__name__}.{method.__name__}"
@@ -120,15 +120,24 @@ def mlflow_tracked(
 class ReelPipeline(Pipeline):
     """The five-stage raw video clips → CapCut draft pipeline."""
 
-    def __init__(self, client: LLMClient | None = None) -> None:
+    def __init__(
+        self,
+        client: LLMClient | None = None,
+        ingest_max_workers: int = 2,
+        analyse_max_workers: int = 4,
+    ) -> None:
         """Initialise the pipeline with an optional shared LLM client.
 
         Args:
             client: LLM client injected into every LLM-backed stage. Defaults
                 to a freshly constructed ``GeminiClient`` per stage when
                 ``None``.
+            ingest_max_workers: Parallel worker processes for Stage 1.
+            analyse_max_workers: Concurrent LLM calls for Stage 2.
         """
         self._client = client
+        self._ingest_max_workers = ingest_max_workers
+        self._analyse_max_workers = analyse_max_workers
 
     @property
     def stages(self) -> list[Stage]:
@@ -138,8 +147,8 @@ class ReelPipeline(Pipeline):
             Ordered list of ``Stage`` instances.
         """
         return [
-            IngestStage(),
-            AnalyseStage(self._client),
+            IngestStage(max_workers=self._ingest_max_workers),
+            AnalyseStage(self._client, max_workers=self._analyse_max_workers),
             DirectStage(self._client),
             CritiqueStage(self._client),
             RenderStage(),
@@ -163,7 +172,9 @@ def run_pipeline(
     input_dir: Path,
     output_dir: Path,
     auto_confirm: bool = False,
-    max_critique_retries: int = 2,
+    critique_max_retries: int = 2,
+    ingest_max_workers: int = 2,
+    analyse_max_workers: int = 4,
 ) -> None:
     """Run the full five-stage pipeline.
 
@@ -180,19 +191,25 @@ def run_pipeline(
             inventories, cut list, critique JSONs, and the CapCut draft).
         auto_confirm: When ``True``, skip the interactive confirmation prompt
             between stages.
-        max_critique_retries: Maximum number of critique iterations before the
+        critique_max_retries: Maximum number of critique iterations before the
             pipeline ships the current cut list as-is.
+        ingest_max_workers: Parallel worker processes for Stage 1 (ingest).
+        analyse_max_workers: Concurrent LLM calls for Stage 2 (analyse).
     """
     brief_path = _find_brief(input_dir)
     state = PipelineState(
         input_dir=input_dir,
         output_dir=output_dir,
         brief_path=brief_path,
-        max_critique_retries=max_critique_retries,
+        critique_max_retries=critique_max_retries,
     )
 
     client = GeminiClient()
-    state = ReelPipeline(client).run(state, auto_confirm=auto_confirm)
+    state = ReelPipeline(
+        client,
+        ingest_max_workers=ingest_max_workers,
+        analyse_max_workers=analyse_max_workers,
+    ).run(state, auto_confirm=auto_confirm)
 
     log.info("pipeline_complete", draft=str(state.draft_path))
     print(f"\nDraft saved to: {state.draft_path}")

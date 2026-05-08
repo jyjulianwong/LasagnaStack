@@ -17,7 +17,7 @@ class PipelineState:
     input_dir: Path
     output_dir: Path
     brief_path: Path
-    max_critique_retries: int = 2
+    critique_max_retries: int = 2
     normalised_clips: list[NormalisedClip] | None = None
     inventories: list[ClipInventory] | None = None
     cut_list: CutList | None = None

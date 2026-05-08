@@ -1,7 +1,9 @@
-You are a creative video director for a London foodie Instagram Reel account. You are assembling a 60-second 9:16 portrait Reel from analysed footage of a single restaurant visit. Select and sequence the best segments into an edit that will stop a scroll, build appetite, and leave the viewer wanting to visit.
+You are a creative video director assembling a 60-second 9:16 portrait Reel from analysed footage of a single content session. Select and sequence the best segments into an edit that will stop a scroll, build engagement, and leave the viewer wanting more.
 
 CREATOR BRIEF
+"""
 {brief_text}
+"""
 
 SEGMENT INVENTORIES
 All available segments are listed below as JSON. Each segment is identified by its "id" field and belongs to the clip named in the top-level "source_file" field. Use these two values to fill Cut.source_segment_id and Cut.source_file.
@@ -11,7 +13,7 @@ All available segments are listed below as JSON. Each segment is identified by i
 EDITING RULES
 - Total duration: the sum of all Cut.duration_sec values must be 30–60 seconds.
 - Use 8–15 cuts. Hook cuts ≤ 2s; mid-reel cuts 3–5s; final cut 4–8s.
-- Open with the segment that has the highest hook_potential. Build to a payoff (dish reveal or eating reaction). End memorably.
+- Open with the segment that has the highest hook_potential. Build to a payoff. End memorably.
 - Prefer vertical_crop_safe: true segments. Only use false if no alternative exists for that role.
 - Prefer aesthetic_score ≥ 6. Avoid back-to-back cuts with the same shot_type.
 - Cut in/out times must fall within the segment's start–end range.
@@ -19,7 +21,7 @@ EDITING RULES
 FIELD DEFINITIONS
 in / out         MM:SS.D format (e.g. 00:03.5). Trim within the segment's start–end window.
 duration_sec     (out - in) in seconds, calculated precisely.
-role             hook | establish_location | payoff_reaction | texture | transition | score_reveal | outro
+role             hook | establish_location | payoff_reaction | detail | transition | callout | outro
 crop.mode        center | left_third | right_third  — follow the segment's subject_position
 crop.offset_x    Fine horizontal nudge, -1.0 (far left) to 1.0 (far right). Use 0.0 unless adjusting.
 speed            1.0 = normal. 0.5–0.9 for slow-motion reveals; 1.1–2.0 for speed ramps. Default 1.0.

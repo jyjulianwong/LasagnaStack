@@ -78,7 +78,8 @@ uv run python -m lasagnastack make ./my_clips/ --out ./drafts/reel_2025_05_05 --
 Full CLI reference:
 
 ```
-usage: lasagnastack make [-h] --out OUTPUT_DIR [--yes] [--max-critique-retries N] INPUT_DIR
+usage: lasagnastack make [-h] --out OUTPUT_DIR [--yes] [--critique-max-retries N]
+                         [--ingest-max-workers N] [--analyse-max-workers N] INPUT_DIR
 
 positional arguments:
   INPUT_DIR                     Folder containing clips and brief .txt
@@ -86,7 +87,9 @@ positional arguments:
 options:
   --out OUTPUT_DIR              Destination for the CapCut draft and working files
   --yes, -y                     Auto-confirm all stage prompts
-  --max-critique-retries N      Critique loop cap (default: 2)
+  --critique-max-retries N      Critique loop cap (default: 2)
+  --ingest-max-workers N        Parallel worker processes for Stage 1 — ingest (default: 2)
+  --analyse-max-workers N       Concurrent LLM calls for Stage 2 — analyse (default: 4)
 ```
 
 ## Open the draft in CapCut Desktop (macOS)
@@ -126,7 +129,7 @@ MLFLOW_EXPERIMENT_NAME=lasagnastack
 - **Traces tab** — individual LLM call spans appear in real time as stages progress.
 - **Metrics tab** — `total_input_tokens`, `total_output_tokens`, `total_cost_usd`, and `llm_call_count` are written once the run completes.
 
-Runs are named `lasagnastack-{brief_stem}-{4-char-id}` and tagged with the model, reel name, and `max_critique_retries`.
+Runs are named `lasagnastack-{brief_stem}-{4-char-id}` and tagged with the model, reel name, and `critique_max_retries`.
 
 > **No server?** Set `MLFLOW_TRACKING_URI=mlruns` to write results to a local folder instead, then view them with `mlflow ui`.
 
@@ -136,7 +139,9 @@ Runs are named `lasagnastack-{brief_stem}-{4-char-id}` and tagged with the model
 |---|---|---|
 | Gemini API key | `GEMINI_API_KEY` env var (required) | — |
 | LLM model | `LASAGNASTACK_LLM_MODEL` env var | `gemini/gemini-2.5-flash` |
-| Critique loop cap | `--max-critique-retries` CLI flag | `2` |
+| Critique loop cap | `--critique-max-retries` CLI flag | `2` |
+| Stage 1 worker processes | `--ingest-max-workers` CLI flag | `2` |
+| Stage 2 concurrent LLM calls | `--analyse-max-workers` CLI flag | `4` |
 | Output resolution | `_TARGET_WIDTH` / `_TARGET_HEIGHT` in `src/lasagnastack/stages/ingest.py` | `720×1280` |
 
 Example — run with a different model:

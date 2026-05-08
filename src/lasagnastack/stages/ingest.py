@@ -1,4 +1,5 @@
 import dataclasses
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import ffmpeg
@@ -17,12 +18,40 @@ _TARGET_HEIGHT = 1280
 _TARGET_CODEC = "libx264"
 
 
-def run(input_dir: Path, output_dir: Path) -> list[NormalisedClip]:
+def _process_clip(src: Path, dest: Path) -> tuple[float, list[float]]:
+    """Normalise src and detect its scene cuts. Module-level for multiprocessing picklability.
+
+    Args:
+        src: Source clip path.
+        dest: Destination path for the normalised clip.
+
+    Returns:
+        ``(duration_sec, scene_cut_times)`` tuple.
+    """
+    log.info("ingest_normalising", source=src.name, dest=dest.name)
+    duration = _normalise_clip(src, dest)
+    cuts = _detect_scene_cuts(src)
+    log.info(
+        "ingest_done",
+        source=src.name,
+        duration_sec=round(duration, 2),
+        scene_cuts=len(cuts),
+    )
+    return duration, cuts
+
+
+def run(
+    input_dir: Path,
+    output_dir: Path,
+    max_workers: int = 1,
+) -> list[NormalisedClip]:
     """Normalise all clips to 720×1280 H.264 and detect scene cuts.
 
     Args:
         input_dir: Folder containing raw MP4/MOV clips and the brief .txt.
         output_dir: Destination root; normalised clips written to output_dir/normalised/.
+        max_workers: Number of parallel worker processes. ``1`` runs serially
+            in the current process; ``>1`` uses a ``ProcessPoolExecutor``.
 
     Returns:
         One NormalisedClip per source file, in discovery order.
@@ -33,29 +62,23 @@ def run(input_dir: Path, output_dir: Path) -> list[NormalisedClip]:
 
     normalised_dir = output_dir / "normalised"
     normalised_dir.mkdir(parents=True, exist_ok=True)
+    dests = [normalised_dir / f"{src.stem}_norm.mp4" for src in clips]
 
-    results = []
-    for src in clips:
-        dest = normalised_dir / f"{src.stem}_norm.mp4"
-        log.info("ingest_normalising", source=src.name, dest=dest.name)
-        duration = _normalise_clip(src, dest)
-        cuts = _detect_scene_cuts(src)  # source clip: unpadded, better signal
-        log.info(
-            "ingest_done",
-            source=src.name,
-            duration_sec=round(duration, 2),
-            scene_cuts=len(cuts),
-        )
-        results.append(
-            NormalisedClip(
-                source_path=src,
-                normalised_path=dest,
-                duration_sec=duration,
-                scene_cut_times=cuts,
-            )
-        )
+    if max_workers > 1:
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            process_results = list(executor.map(_process_clip, clips, dests))
+    else:
+        process_results = [_process_clip(src, dest) for src, dest in zip(clips, dests)]
 
-    return results
+    return [
+        NormalisedClip(
+            source_path=src,
+            normalised_path=dest,
+            duration_sec=duration,
+            scene_cut_times=cuts,
+        )
+        for src, dest, (duration, cuts) in zip(clips, dests, process_results)
+    ]
 
 
 def _find_clips(input_dir: Path) -> list[Path]:
@@ -117,8 +140,17 @@ def _detect_scene_cuts(clip_path: Path) -> list[float]:
 
 
 class IngestStage(Stage):
+    def __init__(self, max_workers: int = 1) -> None:
+        """Initialise IngestStage.
+
+        Args:
+            max_workers: Number of parallel worker processes for clip
+                normalisation and scene detection. ``1`` runs serially.
+        """
+        self._max_workers = max_workers
+
     def run(self, state: PipelineState) -> PipelineState:
-        clips = run(state.input_dir, state.output_dir)
+        clips = run(state.input_dir, state.output_dir, max_workers=self._max_workers)
         return dataclasses.replace(state, normalised_clips=clips)
 
     def completion_message(self, state: PipelineState) -> str:
