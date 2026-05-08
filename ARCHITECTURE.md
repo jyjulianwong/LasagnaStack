@@ -12,7 +12,7 @@ Each stage transforms the shared `PipelineState` and writes its output to disk b
 flowchart TD
     INPUT(["📂 Input folder\nMP4 / MOV clips  +  brief.txt"])
 
-    S1["**Stage 1 · Ingest**\nffmpeg  ·  PySceneDetect\n──────────────────────────\nNormalise every clip to 720 × 1280 H.264\nDetect scene-cut timestamps"]
+    S1["**Stage 1 · Ingest**\nffmpeg  ·  PySceneDetect\n──────────────────────────\nNormalise every clip to 480 × 854 H.264\nDetect scene-cut timestamps"]
     S2["**Stage 2 · Analyse**\nGemini Files API\n──────────────────────────\nUpload normalised clips, request structured\nper-segment metadata (shot type, score, crop safety …)\nResponses cached on disk by file SHA-256"]
     S3["**Stage 3 · Direct**\nGemini generate()\n──────────────────────────\nSend all segment data + brief in a single call\nReceive an ordered CutList as structured JSON"]
     S4["**Stage 4 · Critique Loop**\nGemini generate()\n──────────────────────────\nCritic LLM reviews CutList against 8 criteria\nRevises and re-submits up to N times until approved"]

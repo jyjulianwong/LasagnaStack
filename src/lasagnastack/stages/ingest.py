@@ -16,8 +16,9 @@ from lasagnastack.models.inventory import NormalisedClip
 log = structlog.get_logger()
 
 _CLIP_EXTENSIONS = {".mp4", ".mov"}
-_TARGET_WIDTH = 720
-_TARGET_HEIGHT = 1280
+_TARGET_WIDTH = 480
+_TARGET_HEIGHT = 854
+_TARGET_FPS = 5
 _TARGET_CODEC = "libx264"
 
 
@@ -131,7 +132,7 @@ def _normalise_clip(src: Path, dest: Path) -> float:
     )
 
     out_streams = [video, inp.audio] if has_audio else [video]
-    out_kwargs: dict = dict(vcodec=_TARGET_CODEC, crf=23, preset="fast")
+    out_kwargs: dict = dict(vcodec=_TARGET_CODEC, crf=23, preset="fast", r=_TARGET_FPS)
     if has_audio:
         out_kwargs["acodec"] = "aac"
 

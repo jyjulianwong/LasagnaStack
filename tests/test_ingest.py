@@ -44,8 +44,8 @@ class TestNormaliseClip:
         ingest._normalise_clip(raw_clip, dest)
         probe = ffmpeg.probe(str(dest))
         vs = next(s for s in probe["streams"] if s["codec_type"] == "video")
-        assert vs["width"] == 720
-        assert vs["height"] == 1280
+        assert vs["width"] == 480
+        assert vs["height"] == 854
 
     def test_output_codec_is_h264(self, raw_clip, tmp_path):
         dest = tmp_path / "norm.mp4"

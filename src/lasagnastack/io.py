@@ -7,7 +7,7 @@ Layout
 ------
 output_dir/
   .cache/                 Gemini response cache (keyed by clip hash + model)
-  normalised/             Stage 1 — 720×1280 H.264 clips for analysis
+  normalised/             Stage 1 — 480×854 H.264 clips for analysis
   inventories/            Stage 2 — ClipInventory JSON per source clip
   cut_list.json           Stage 3 — CutList JSON
   critique/               Stage 4 — CritiqueResult JSON per iteration
