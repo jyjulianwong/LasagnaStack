@@ -18,23 +18,18 @@ class Segment(BaseModel):
     end: str
     shot_type: str
     description: str
-    subjects: list[str]
-    motion: str
-    framing: str
     subject_position: str
     vertical_crop_safe: bool
     audio: str
     aesthetic_score: int
     hook_potential: int
     best_use: str
-    notes: str
 
 
 class OverallAssessment(BaseModel):
     usability: str
     primary_subject: str
     lighting: str
-    audio_notes: str
     issues: list[str]
 
 

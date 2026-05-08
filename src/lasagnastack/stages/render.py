@@ -112,7 +112,11 @@ def run(cut_list: CutList, output_dir: Path, input_dir: Path) -> Path:
 
         if cut.caption:
             cap_start = timeline_pos + cut.caption.in_ms * 1000
-            cap_duration = (cut.caption.out_ms - cut.caption.in_ms) * 1000
+            cap_end = min(
+                timeline_pos + cut.caption.out_ms * 1000,
+                timeline_pos + target_duration_us,
+            )
+            cap_duration = cap_end - cap_start
             cap_tr = Timerange(cap_start, cap_duration)
             txt_seg = TextSegment(
                 cut.caption.text,

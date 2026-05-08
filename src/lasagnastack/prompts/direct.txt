@@ -33,5 +33,3 @@ caption.position top | center | bottom
 caption.in_ms    Milliseconds after cut start when caption appears.
 caption.out_ms   Milliseconds after cut start when caption disappears.
 alt_captions     List of {{cut_order: int, texts: [str, ...]}} objects. Include one entry per captioned cut, with 2–3 alternative caption strings for A/B testing.
-music_search_terms  3–5 short search terms for finding a royalty-free background track that fits the reel's tone.
-rationale        2–3 sentences explaining the editorial choices and how they serve the brief.

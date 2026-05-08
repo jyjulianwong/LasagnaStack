@@ -6,7 +6,6 @@ class ReelMeta(BaseModel):
     target_duration_sec: float
     aspect_ratio: str
     tone: str
-    music_mood: str
 
 
 class CropHint(BaseModel):
@@ -50,5 +49,3 @@ class CutList(BaseModel):
     reel_meta: ReelMeta
     cuts: list[Cut]
     alt_captions: list[AltCaptionSet]
-    music_search_terms: list[str]
-    rationale: str

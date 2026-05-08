@@ -48,23 +48,18 @@ FIXTURE_SEGMENT = Segment(
     end="00:02.5",
     shot_type="dish_reveal",
     description="Overhead shot of test dish",
-    subjects=["dish"],
-    motion="static",
-    framing="close-up",
     subject_position="center",
     vertical_crop_safe=True,
     audio="ambient",
     aesthetic_score=8,
     hook_potential=7,
     best_use="hook",
-    notes="",
 )
 
 FIXTURE_ASSESSMENT = OverallAssessment(
     usability="high",
     primary_subject="Test dish",
     lighting="warm",
-    audio_notes="ambient",
     issues=[],
 )
 
@@ -96,12 +91,9 @@ FIXTURE_CUT_LIST = CutList(
         target_duration_sec=60.0,
         aspect_ratio="9:16",
         tone="vibrant",
-        music_mood="upbeat",
     ),
     cuts=[FIXTURE_CUT],
     alt_captions=[],
-    music_search_terms=["upbeat foodie", "London restaurant"],
-    rationale="Strong hook followed by a dish reveal creates a compelling narrative.",
 )
 
 FIXTURE_CRITIQUE_APPROVED = CritiqueResult(
