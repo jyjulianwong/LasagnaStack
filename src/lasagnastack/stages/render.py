@@ -1,8 +1,10 @@
 import dataclasses
 import json
 import platform as _sys_platform
+import re
 import shutil
 import time
+from datetime import datetime
 from pathlib import Path
 
 import pymediainfo as _pymediainfo
@@ -54,8 +56,9 @@ def run(cut_list: CutList, output_dir: Path, input_dir: Path) -> Path:
     draft_parent.mkdir(parents=True, exist_ok=True)
 
     title = cut_list.reel_meta.title
-    folder_name = _draft_folder_name(title)
-    display_name = _draft_display_name(title)
+    timestamp = _make_timestamp()
+    folder_name = _draft_folder_name(title, timestamp)
+    display_name = _draft_display_name(title, timestamp)
     script = DraftFolder(str(draft_parent)).create_draft(
         folder_name, _DRAFT_WIDTH, _DRAFT_HEIGHT, _DRAFT_FPS, allow_replace=True
     )
@@ -134,12 +137,59 @@ def run(cut_list: CutList, output_dir: Path, input_dir: Path) -> Path:
     return final_path
 
 
-def _draft_display_name(title: str) -> str:
-    return f"{_PREFIX} - {title}"
+def _sanitise_title(title: str) -> str:
+    """Remove special characters from a title, normalising whitespace.
+
+    Keeps alphanumeric characters (including Unicode letters), spaces,
+    hyphens, and underscores. Collapses consecutive whitespace to a single
+    space so that removed characters do not leave double spaces behind.
+
+    Args:
+        title: Raw title string, e.g. from the creator brief.
+
+    Returns:
+        Sanitised title safe for use in file and folder names.
+    """
+    sanitised = re.sub(r"[^\w\s\-]", "", title)
+    return re.sub(r"\s+", " ", sanitised).strip()
 
 
-def _draft_folder_name(title: str) -> str:
-    return _draft_display_name(title)
+def _make_timestamp() -> str:
+    """Return the current local time as a ``YYYYMMDD_HHMMSS`` string.
+
+    Returns:
+        Timestamp string, e.g. ``"20260508_200844"``.
+    """
+    return datetime.now().strftime("%Y%m%d_%H%M%S")
+
+
+def _draft_display_name(title: str, timestamp: str) -> str:
+    """Return the CapCut project display name for a given title and timestamp.
+
+    Args:
+        title: Reel title from the cut list.
+        timestamp: Timestamp suffix in ``YYYYMMDD_HHMMSS`` format.
+
+    Returns:
+        Display name string, e.g. ``"LasagnaStack - Hana Don 20260508_200844"``.
+    """
+    return f"{_PREFIX} - {_sanitise_title(title)} {timestamp}"
+
+
+def _draft_folder_name(title: str, timestamp: str) -> str:
+    """Return the draft folder name for a given title and timestamp.
+
+    The folder name is kept identical to the display name so CapCut shows
+    the same label in both the file system and its project list.
+
+    Args:
+        title: Reel title from the cut list.
+        timestamp: Timestamp suffix in ``YYYYMMDD_HHMMSS`` format.
+
+    Returns:
+        Folder name string, e.g. ``"LasagnaStack - Hana Don 20260508_200844"``.
+    """
+    return _draft_display_name(title, timestamp)
 
 
 def _display_dimensions(path: Path) -> tuple[int, int]:

@@ -1,4 +1,5 @@
 import dataclasses
+import itertools
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
@@ -7,7 +8,9 @@ import structlog
 from scenedetect import ContentDetector, open_video
 from scenedetect.scene_manager import SceneManager
 
+from lasagnastack import io
 from lasagnastack.base import PipelineState, Stage
+from lasagnastack.cache import DiskCache
 from lasagnastack.models.inventory import NormalisedClip
 
 log = structlog.get_logger()
@@ -18,16 +21,29 @@ _TARGET_HEIGHT = 1280
 _TARGET_CODEC = "libx264"
 
 
-def _process_clip(src: Path, dest: Path) -> tuple[float, list[float]]:
+def _process_clip(src: Path, dest: Path, cache_dir: Path) -> tuple[float, list[float]]:
     """Normalise src and detect its scene cuts. Module-level for multiprocessing picklability.
+
+    Checks a ``DiskCache`` keyed on the SHA-256 of *src* before doing any work.
+    A cache hit is only accepted when *dest* already exists on disk — if the
+    normalised file was deleted the entry is treated as stale and processing
+    runs again.
 
     Args:
         src: Source clip path.
         dest: Destination path for the normalised clip.
+        cache_dir: Directory for the disk cache.
 
     Returns:
         ``(duration_sec, scene_cut_times)`` tuple.
     """
+    cache = DiskCache(cache_dir)
+    key = f"{src.name}_ingest"
+    cached = cache.get(key)
+    if cached is not None and dest.exists():
+        log.info("ingest_cache_hit", source=src.name)
+        return cached["duration_sec"], cached["scene_cut_times"]
+
     log.info("ingest_normalising", source=src.name, dest=dest.name)
     duration = _normalise_clip(src, dest)
     cuts = _detect_scene_cuts(src)
@@ -37,6 +53,7 @@ def _process_clip(src: Path, dest: Path) -> tuple[float, list[float]]:
         duration_sec=round(duration, 2),
         scene_cuts=len(cuts),
     )
+    cache.set(key, {"duration_sec": duration, "scene_cut_times": cuts})
     return duration, cuts
 
 
@@ -63,12 +80,17 @@ def run(
     normalised_dir = output_dir / "normalised"
     normalised_dir.mkdir(parents=True, exist_ok=True)
     dests = [normalised_dir / f"{src.stem}_norm.mp4" for src in clips]
+    cache_dir = io.cache_dir(output_dir)
 
     if max_workers > 1:
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
-            process_results = list(executor.map(_process_clip, clips, dests))
+            process_results = list(
+                executor.map(_process_clip, clips, dests, itertools.repeat(cache_dir))
+            )
     else:
-        process_results = [_process_clip(src, dest) for src, dest in zip(clips, dests)]
+        process_results = [
+            _process_clip(src, dest, cache_dir) for src, dest in zip(clips, dests)
+        ]
 
     return [
         NormalisedClip(

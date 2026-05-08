@@ -1,7 +1,16 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import TYPE_CHECKING
+
 import ffmpeg
 import pytest
 
+from lasagnastack.cache import DiskCache
 from lasagnastack.stages import ingest
+
+if TYPE_CHECKING:
+    from _pytest.monkeypatch import MonkeyPatch
 
 
 class TestFindClips:
@@ -83,6 +92,118 @@ class TestDetectSceneCuts:
         bad.write_bytes(b"not a video")
         cuts = ingest._detect_scene_cuts(bad)
         assert cuts == []
+
+
+class TestProcessClipCache:
+    """Tests for the DiskCache integration in _process_clip."""
+
+    def test_cache_miss_processes_and_stores(
+        self, raw_clip: Path, tmp_path: Path
+    ) -> None:
+        """On a cache miss, _process_clip normalises the clip and writes to cache."""
+        dest = tmp_path / "norm.mp4"
+        cache_dir = tmp_path / ".cache"
+
+        ingest._process_clip(raw_clip, dest, cache_dir)
+
+        cache = DiskCache(cache_dir)
+        key = f"{raw_clip.name}_ingest"
+        cached = cache.get(key)
+        assert cached is not None
+        assert "duration_sec" in cached
+        assert "scene_cut_times" in cached
+        assert dest.exists()
+
+    def test_cache_hit_skips_normalisation(
+        self, raw_clip: Path, tmp_path: Path, monkeypatch: "MonkeyPatch"
+    ) -> None:
+        """On a cache hit with dest present, normalisation and scene detection are skipped."""
+        dest = tmp_path / "norm.mp4"
+        cache_dir = tmp_path / ".cache"
+
+        # Pre-populate the cache and create a dummy dest file.
+        cache = DiskCache(cache_dir)
+        key = f"{raw_clip.name}_ingest"
+        cache.set(key, {"duration_sec": 3.0, "scene_cut_times": [1.5]})
+        dest.write_bytes(b"dummy")
+
+        normalise_calls: list[bool] = []
+        detect_calls: list[bool] = []
+        monkeypatch.setattr(
+            ingest, "_normalise_clip", lambda *a: normalise_calls.append(True) or 0.0
+        )
+        monkeypatch.setattr(
+            ingest, "_detect_scene_cuts", lambda *a: detect_calls.append(True) or []
+        )
+
+        duration, cuts = ingest._process_clip(raw_clip, dest, cache_dir)
+
+        assert not normalise_calls
+        assert not detect_calls
+        assert duration == 3.0
+        assert cuts == [1.5]
+
+    def test_cache_hit_without_dest_reprocesses(
+        self, raw_clip: Path, tmp_path: Path
+    ) -> None:
+        """A cache entry is ignored when the normalised dest file is absent."""
+        dest = tmp_path / "norm.mp4"
+        cache_dir = tmp_path / ".cache"
+
+        # Write a cache entry but do NOT create the dest file.
+        cache = DiskCache(cache_dir)
+        key = f"{raw_clip.name}_ingest"
+        cache.set(key, {"duration_sec": 99.0, "scene_cut_times": []})
+
+        duration, _ = ingest._process_clip(raw_clip, dest, cache_dir)
+
+        # Should have re-processed and returned the real duration (~5 s), not 99.
+        assert abs(duration - 5.0) < 0.1
+        assert dest.exists()
+
+    def test_cache_hit_logs_ingest_cache_hit(
+        self, raw_clip: Path, tmp_path: Path
+    ) -> None:
+        """ingest_cache_hit is emitted when the result is served from cache."""
+        import structlog.testing
+
+        dest = tmp_path / "norm.mp4"
+        cache_dir = tmp_path / ".cache"
+
+        cache = DiskCache(cache_dir)
+        key = f"{raw_clip.name}_ingest"
+        cache.set(key, {"duration_sec": 3.0, "scene_cut_times": []})
+        dest.write_bytes(b"dummy")
+
+        with structlog.testing.capture_logs() as logs:
+            ingest._process_clip(raw_clip, dest, cache_dir)
+
+        assert any(entry.get("event") == "ingest_cache_hit" for entry in logs)
+
+    def test_run_uses_cache_on_second_call(
+        self, raw_clip: Path, tmp_path: Path, monkeypatch: "MonkeyPatch"
+    ) -> None:
+        """Calling run() twice skips normalisation on the second call via cache."""
+        input_dir = tmp_path / "input"
+        input_dir.mkdir()
+        (input_dir / raw_clip.name).symlink_to(raw_clip)
+        out = tmp_path / "out"
+
+        ingest.run(input_dir, out)
+
+        normalise_calls: list[bool] = []
+        detect_calls: list[bool] = []
+        monkeypatch.setattr(
+            ingest, "_normalise_clip", lambda *a: normalise_calls.append(True) or 0.0
+        )
+        monkeypatch.setattr(
+            ingest, "_detect_scene_cuts", lambda *a: detect_calls.append(True) or []
+        )
+
+        ingest.run(input_dir, out)
+
+        assert not normalise_calls
+        assert not detect_calls
 
 
 class TestRun:

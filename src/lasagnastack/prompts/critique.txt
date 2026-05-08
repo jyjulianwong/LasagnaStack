@@ -29,3 +29,4 @@ RESPONSE RULES
 - Any criteria fail: set verdict "revise", list each issue precisely, and provide a corrected cut_list_v2 that fixes every issue.
 - The corrected cut_list_v2 must itself pass all criteria above.
 - Only use segments listed in the inventories — do not invent new ones.
+- Keep your feedback concise but comprehensive.

@@ -1,4 +1,5 @@
 import json
+import re
 import unittest.mock as mock
 
 import pytest
@@ -8,24 +9,52 @@ from lasagnastack import io
 from lasagnastack.models.cut_list import Caption, CropHint
 from lasagnastack.stages import render
 
+_TS = "20260508_200844"
+
 
 class TestDraftNaming:
-    def test_display_name_has_prefix(self):
-        assert render._draft_display_name("Hana Don") == "LasagnaStack - Hana Don"
-
-    def test_folder_name_matches_display_name(self):
-        assert render._draft_folder_name("Hana Don") == "LasagnaStack - Hana Don"
-
-    def test_folder_name_preserves_spaces(self):
+    def test_display_name_has_prefix(self) -> None:
+        """Display name is prefixed with 'LasagnaStack - ' and suffixed with the timestamp."""
         assert (
-            render._draft_folder_name("Test  Kitchen") == "LasagnaStack - Test  Kitchen"
+            render._draft_display_name("Hana Don", _TS)
+            == f"LasagnaStack - Hana Don {_TS}"
         )
 
-    def test_folder_name_preserves_special_chars(self):
-        assert render._draft_folder_name("Café & Bar") == "LasagnaStack - Café & Bar"
+    def test_folder_name_matches_display_name(self) -> None:
+        """Folder name is identical to the display name."""
+        assert render._draft_folder_name("Hana Don", _TS) == render._draft_display_name(
+            "Hana Don", _TS
+        )
 
-    def test_folder_name_prefix(self):
-        assert render._draft_folder_name("X").startswith("LasagnaStack - ")
+    def test_folder_name_collapses_extra_whitespace(self) -> None:
+        """Consecutive spaces are collapsed to a single space in the folder name."""
+        result = render._draft_folder_name("Test  Kitchen", _TS)
+        assert "Test Kitchen" in result
+
+    def test_folder_name_strips_special_chars(self) -> None:
+        """Special characters such as '&' are removed from the folder name."""
+        result = render._draft_folder_name("Café & Bar", _TS)
+        assert "&" not in result
+
+    def test_folder_name_prefix(self) -> None:
+        """Folder name always begins with the LasagnaStack prefix."""
+        assert render._draft_folder_name("X", _TS).startswith("LasagnaStack - ")
+
+    def test_folder_name_has_timestamp_suffix(self) -> None:
+        """Folder name ends with the supplied timestamp."""
+        assert render._draft_folder_name("X", _TS).endswith(_TS)
+
+    def test_sanitise_title_removes_ampersand(self) -> None:
+        """'&' is treated as a special character and stripped."""
+        assert "&" not in render._sanitise_title("Café & Bar")
+
+    def test_sanitise_title_keeps_letters_and_digits(self) -> None:
+        """Alphanumeric characters and unicode letters are preserved."""
+        assert render._sanitise_title("Café123") == "Café123"
+
+    def test_sanitise_title_keeps_hyphens(self) -> None:
+        """Hyphens are preserved as they are filesystem-safe."""
+        assert "-" in render._sanitise_title("Hana-Don")
 
 
 class TestParseTimestamp:
@@ -109,28 +138,33 @@ class TestRun:
         result = render.run(fixture_cut_list, tmp_path, raw_clip.parent)
         assert (result / "draft_info.json").exists()
 
-    def test_draft_folder_name_is_display_name(
+    def test_draft_folder_name_has_prefix_and_timestamp(
         self, raw_clip, tmp_path, fixture_cut_list
-    ):
+    ) -> None:
+        """Draft folder name starts with the LasagnaStack prefix and ends with a timestamp."""
         result = render.run(fixture_cut_list, tmp_path, raw_clip.parent)
-        expected = render._draft_folder_name(fixture_cut_list.reel_meta.title)
-        assert result.name == expected
+        assert result.name.startswith("LasagnaStack - ")
+        assert re.search(r"\d{8}_\d{6}$", result.name)
 
     def test_draft_info_json_has_display_name(
         self, raw_clip, tmp_path, fixture_cut_list
-    ):
+    ) -> None:
+        """draft_info.json 'name' field matches the draft folder name."""
         result = render.run(fixture_cut_list, tmp_path, raw_clip.parent)
         content = json.loads((result / "draft_info.json").read_text())
-        expected = render._draft_display_name(fixture_cut_list.reel_meta.title)
-        assert content["name"] == expected
+        assert content["name"] == result.name
 
-    def test_allow_replace_overwrites_existing(
-        self, raw_clip, tmp_path, fixture_cut_list
-    ):
-        render.run(fixture_cut_list, tmp_path, raw_clip.parent)
-        render.run(
-            fixture_cut_list, tmp_path, raw_clip.parent
-        )  # second call must not raise
+    def test_second_run_creates_new_folder(
+        self, raw_clip, tmp_path, fixture_cut_list, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Each run produces a uniquely-named folder; earlier drafts are not overwritten."""
+        monkeypatch.setattr(render, "_make_timestamp", lambda: "20260508_100000")
+        result1 = render.run(fixture_cut_list, tmp_path, raw_clip.parent)
+        monkeypatch.setattr(render, "_make_timestamp", lambda: "20260508_100001")
+        result2 = render.run(fixture_cut_list, tmp_path, raw_clip.parent)
+        assert result1.exists()
+        assert result2.exists()
+        assert result1 != result2
 
     def test_cut_with_caption(self, raw_clip, tmp_path, fixture_cut, fixture_cut_list):
         cut_with_caption = fixture_cut.model_copy(
