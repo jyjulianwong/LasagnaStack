@@ -123,6 +123,10 @@ classDiagram
         <<abstract>>
         +stages() list[Stage]
         +run(state, auto_confirm) PipelineState
+        +_run_stage(stage, state) PipelineState
+        +_mlflow_run_name(state) str
+        +_mlflow_tags(state) dict
+        +_log_mlflow_session_metrics(state) None
     }
 
     class Stage {
@@ -150,6 +154,9 @@ classDiagram
 
     class ReelPipeline {
         +stages() list[Stage]
+        +_mlflow_run_name(state) str
+        +_mlflow_tags(state) dict
+        +_log_mlflow_session_metrics(state) None
     }
 
     class GeminiClient {
@@ -180,3 +187,4 @@ classDiagram
 
 > To **add a stage**: subclass `Stage`, implement `run()` and `completion_message()`, then insert an instance into `ReelPipeline.stages`.
 > To **swap the LLM provider**: subclass `LLMClient` and pass an instance to `ReelPipeline(client=…)`.
+> To **create a new pipeline**: subclass `Pipeline`, declare `stages`, and optionally override `_mlflow_run_name`, `_mlflow_tags`, and `_log_mlflow_session_metrics` — MLflow tracking (run, per-stage CHAIN spans, and post-run metrics) is inherited automatically.

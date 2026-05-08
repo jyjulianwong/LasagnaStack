@@ -126,7 +126,7 @@ MLFLOW_EXPERIMENT_NAME=lasagnastack
 
 **3. Run the pipeline as normal.** Open `http://localhost:5000` in your browser to watch live.
 
-- **Traces tab** — individual LLM call spans appear in real time as stages progress.
+- **Traces tab** — spans appear in real time as stages progress. Each trace has three levels: the top-level pipeline span (`ReelPipeline.run`), a per-stage span (e.g. `AnalyseStage.run`), and individual LLM call spans (`GeminiClient._call_api`) nested inside.
 - **Metrics tab** — `total_input_tokens`, `total_output_tokens`, `total_cost_usd`, and `llm_call_count` are written once the run completes.
 
 Runs are named `lasagnastack-{brief_stem}-{4-char-id}` and tagged with the model, reel name, and `critique_max_retries`.
