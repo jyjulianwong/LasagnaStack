@@ -123,4 +123,6 @@ class IngestStage(Stage):
 
     def completion_message(self, state: PipelineState) -> str:
         n = len(state.normalised_clips or [])
-        return f"Stage 1 complete — {n} clip(s) normalised. Continue to Stage 2 (analyse)?"
+        return (
+            f"Stage 1 complete — {n} clip(s) normalised. Continue to Stage 2 (analyse)?"
+        )

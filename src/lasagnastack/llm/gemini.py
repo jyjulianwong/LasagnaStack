@@ -85,14 +85,18 @@ class GeminiClient(LLMClient):
         while getattr(getattr(file_ref, "state", None), "name", None) == "PROCESSING":
             log.debug("files_waiting", name=file_ref.name)
             time.sleep(_FILE_POLL_INTERVAL_S)
-            file_ref = self._client.files.get(name=file_ref.name)
+            file_ref = self._client.files.get(
+                name=file_ref.name  # pyrefly: ignore[bad-argument-type]
+            )
 
         state_name = getattr(getattr(file_ref, "state", None), "name", "UNKNOWN")
         if state_name not in {"ACTIVE", "UNKNOWN"}:
             raise RuntimeError(
                 f"File {file_ref.name} did not reach ACTIVE state: {state_name}"
             )
-        log.info("files_upload_done", name=file_ref.name, uri=getattr(file_ref, "uri", ""))
+        log.info(
+            "files_upload_done", name=file_ref.name, uri=getattr(file_ref, "uri", "")
+        )
         return file_ref
 
     def _delete_file(self, name: str) -> None:
@@ -102,7 +106,9 @@ class GeminiClient(LLMClient):
         except Exception:
             log.warning("files_delete_failed", name=name)
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=30))
+    @retry(
+        stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=30)
+    )
     def _call_api(
         self,
         contents: Any,

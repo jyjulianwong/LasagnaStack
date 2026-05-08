@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from lasagnastack.llm.base import LLMClient
 from lasagnastack.models.critique import CritiqueResult
-from lasagnastack.models.cut_list import AltCaptionSet, CropHint, Cut, CutList, ReelMeta
+from lasagnastack.models.cut_list import CropHint, Cut, CutList, ReelMeta
 from lasagnastack.models.inventory import (
     ClipAnalysisResponse,
     ClipInventory,
@@ -14,7 +14,6 @@ from lasagnastack.models.inventory import (
     OverallAssessment,
     Segment,
 )
-
 
 # ── shared fixture data ──────────────────────────────────────────────────────
 
@@ -51,7 +50,7 @@ FIXTURE_INVENTORY = ClipInventory(
     segments=[FIXTURE_SEGMENT],
 )
 
-FIXTURE_CUT = Cut(
+FIXTURE_CUT = Cut(  # pyrefly: ignore[missing-argument]
     order=1,
     source_segment_id="clip_00_s01",
     source_file="raw_clip.mp4",
@@ -141,6 +140,41 @@ class MockLLMClient(LLMClient):
         raise NotImplementedError(f"MockLLMClient: no fixture for {response_schema}")
 
 
+@pytest.fixture(scope="session")
+def fixture_segment() -> Segment:
+    return FIXTURE_SEGMENT
+
+
+@pytest.fixture(scope="session")
+def fixture_inventory() -> ClipInventory:
+    return FIXTURE_INVENTORY
+
+
+@pytest.fixture(scope="session")
+def fixture_cut() -> Cut:
+    return FIXTURE_CUT
+
+
+@pytest.fixture(scope="session")
+def fixture_cut_list() -> CutList:
+    return FIXTURE_CUT_LIST
+
+
+@pytest.fixture(scope="session")
+def fixture_critique_approved() -> CritiqueResult:
+    return FIXTURE_CRITIQUE_APPROVED
+
+
+@pytest.fixture(scope="session")
+def fixture_critique_revise() -> CritiqueResult:
+    return FIXTURE_CRITIQUE_REVISE
+
+
+@pytest.fixture(scope="session")
+def mock_llm_client_class() -> type[MockLLMClient]:
+    return MockLLMClient
+
+
 @pytest.fixture
 def mock_client() -> MockLLMClient:
     return MockLLMClient()
@@ -199,9 +233,7 @@ def raw_clip(tmp_path_factory) -> Path:
         )
 
     concat_list = tmp / "list.txt"
-    concat_list.write_text(
-        f"file '{seg_a.absolute()}'\nfile '{seg_b.absolute()}'\n"
-    )
+    concat_list.write_text(f"file '{seg_a.absolute()}'\nfile '{seg_b.absolute()}'\n")
     (
         ffmpeg.input(str(concat_list), f="concat", safe=0)
         .output(

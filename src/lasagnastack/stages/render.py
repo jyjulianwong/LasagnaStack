@@ -95,7 +95,10 @@ def run(cut_list: CutList, output_dir: Path, input_dir: Path) -> Path:
         target_tr = Timerange(timeline_pos, target_duration_us)
 
         seg = VideoSegment(
-            material, target_tr, source_timerange=src_tr, speed=cut.speed,
+            material,
+            target_tr,
+            source_timerange=src_tr,
+            speed=cut.speed,
             clip_settings=clip_settings,
         )
 
@@ -112,7 +115,9 @@ def run(cut_list: CutList, output_dir: Path, input_dir: Path) -> Path:
                 cut.caption.text,
                 cap_tr,
                 style=caption_style,
-                clip_settings=ClipSettings(transform_y=_caption_y(cut.caption.position)),
+                clip_settings=ClipSettings(
+                    transform_y=_caption_y(cut.caption.position)
+                ),
             )
             script.add_segment(txt_seg, "captions")
 
@@ -270,28 +275,32 @@ def _update_draft_meta_info(dest: Path, capcut_drafts: Path) -> None:
             continue
         seen_paths.add(file_path)
         duration = vid.get("duration", 0)
-        material_entries.append({
-            "ai_group_type": "",
-            "create_time": now_sec,
-            "duration": duration,
-            "enter_from": 0,
-            "extra_info": Path(file_path).name if file_path else "",
-            "file_Path": file_path,
-            "height": vid.get("height", 0),
-            "id": vid.get("id", ""),
-            "import_time": now_sec,
-            "import_time_ms": now_us,
-            "item_source": 1,
-            "md5": "",
-            "metetype": "video",
-            "roughcut_time_range": {"duration": duration, "start": 0},
-            "sub_time_range": {"duration": -1, "start": -1},
-            "type": 0,
-            "width": vid.get("width", 0),
-        })
+        material_entries.append(
+            {
+                "ai_group_type": "",
+                "create_time": now_sec,
+                "duration": duration,
+                "enter_from": 0,
+                "extra_info": Path(file_path).name if file_path else "",
+                "file_Path": file_path,
+                "height": vid.get("height", 0),
+                "id": vid.get("id", ""),
+                "import_time": now_sec,
+                "import_time_ms": now_us,
+                "item_source": 1,
+                "md5": "",
+                "metetype": "video",
+                "roughcut_time_range": {"duration": duration, "start": 0},
+                "sub_time_range": {"duration": -1, "start": -1},
+                "type": 0,
+                "width": vid.get("width", 0),
+            }
+        )
     # Also add clips that were copied to dest but are not on the timeline.
     for extra_file in dest.iterdir():
-        if not (extra_file.is_file() and extra_file.suffix.lower() in _VIDEO_EXTENSIONS):
+        if not (
+            extra_file.is_file() and extra_file.suffix.lower() in _VIDEO_EXTENSIONS
+        ):
             continue
         file_path = str(extra_file)
         if file_path in seen_paths:
@@ -311,25 +320,27 @@ def _update_draft_meta_info(dest: Path, capcut_drafts: Path) -> None:
         if rotation in (90.0, 270.0):
             w, h = h, w
         duration = int(float(track.duration or 0) * 1_000)
-        material_entries.append({
-            "ai_group_type": "",
-            "create_time": now_sec,
-            "duration": duration,
-            "enter_from": 0,
-            "extra_info": extra_file.name,
-            "file_Path": file_path,
-            "height": h,
-            "id": "",
-            "import_time": now_sec,
-            "import_time_ms": now_us,
-            "item_source": 1,
-            "md5": "",
-            "metetype": "video",
-            "roughcut_time_range": {"duration": duration, "start": 0},
-            "sub_time_range": {"duration": -1, "start": -1},
-            "type": 0,
-            "width": w,
-        })
+        material_entries.append(
+            {
+                "ai_group_type": "",
+                "create_time": now_sec,
+                "duration": duration,
+                "enter_from": 0,
+                "extra_info": extra_file.name,
+                "file_Path": file_path,
+                "height": h,
+                "id": "",
+                "import_time": now_sec,
+                "import_time_ms": now_us,
+                "item_source": 1,
+                "md5": "",
+                "metetype": "video",
+                "roughcut_time_range": {"duration": duration, "start": 0},
+                "sub_time_range": {"duration": -1, "start": -1},
+                "type": 0,
+                "width": w,
+            }
+        )
 
     for dm in meta.get("draft_materials", []):
         if dm.get("type") == 0:
@@ -421,7 +432,7 @@ def _make_clip_settings(
     max_shift = (overflow_px / 2) / (canvas_w / 2)  # in transform_x units
 
     if crop.mode == "left_third":
-        base = max_shift   # shift video right → see left portion
+        base = max_shift  # shift video right → see left portion
     elif crop.mode == "right_third":
         base = -max_shift  # shift video left → see right portion
     else:

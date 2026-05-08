@@ -54,9 +54,7 @@ def _build_prompt(inventories: list[ClipInventory], brief_path: Path) -> str:
         .joinpath("direct.txt")
         .read_text(encoding="utf-8")
     )
-    inventories_json = json.dumps(
-        [inv.model_dump() for inv in inventories], indent=2
-    )
+    inventories_json = json.dumps([inv.model_dump() for inv in inventories], indent=2)
     return template.format(
         brief_text=brief_path.read_text(encoding="utf-8").strip(),
         inventories_json=inventories_json,
@@ -69,7 +67,9 @@ class DirectStage(Stage):
 
     def run(self, state: PipelineState) -> PipelineState:
         assert state.inventories is not None
-        cut_list = run(state.inventories, state.brief_path, state.output_dir, self._client)
+        cut_list = run(
+            state.inventories, state.brief_path, state.output_dir, self._client
+        )
         return dataclasses.replace(state, cut_list=cut_list)
 
     def completion_message(self, state: PipelineState) -> str:
