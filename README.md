@@ -2,7 +2,7 @@
 
 <img src="docs/lasagna.png" alt="LasagnaStack" width="180" />
 
-An AI pipeline that turns raw video clips into an editable CapCut draft for short-form video and reel editing.
+An AI pipeline that turns raw video clips into an editable CapCut project for short-form reel editing.
 
 It is as simple as:
 

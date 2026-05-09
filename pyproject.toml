@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lasagnastack"
 version = "0.1.0"
-description = "An AI pipeline that turns raw video clips into fully edited CapCut projects."
+description = "An AI pipeline that turns raw video clips into an editable CapCut project for short-form reel editing."
 authors = [
     { name = "Julian Wong", email = "julianwong2000@gmail.com" }
 ]
