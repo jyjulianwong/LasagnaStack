@@ -23,6 +23,8 @@ REVIEW CRITERIA — check each and report failures as issues
 6. Aesthetics   No segments with aesthetic_score < 6 unless unavoidable.
 7. Story arc    Follows hook → build → payoff → memorable close.
 8. Brief        The edit clearly serves the stated subject, tone, and mood from the brief.
+9. Captions     caption.out_ms must not exceed the cut's duration_sec × 1000. Timing is clip-relative.
+10. Overlays    Each overlay's end_ms must be > start_ms. Both must fall within the total reel duration (sum of duration_sec × 1000). Overlays must only be used when text genuinely needs to span a cut boundary; single-clip text belongs in caption, not overlays.
 
 RESPONSE RULES
 - All criteria pass: set verdict "approved", leave issues empty, cut_list_v2 null.

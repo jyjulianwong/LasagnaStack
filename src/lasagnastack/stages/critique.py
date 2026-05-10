@@ -130,4 +130,4 @@ class CritiqueStage(Stage):
         return dataclasses.replace(state, cut_list=cut_list)
 
     def completion_message(self, state: PipelineState) -> str:
-        return "Stage 4 complete — cut list approved. Continue to Stage 5 (render)?"
+        return "Stage 4 complete — cut list approved. Continue to Stage 5 (enhance)?"

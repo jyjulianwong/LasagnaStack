@@ -11,6 +11,7 @@ from lasagnastack.llm.gemini import GeminiClient
 from lasagnastack.stages.analyse import AnalyseStage
 from lasagnastack.stages.critique import CritiqueStage
 from lasagnastack.stages.direct import DirectStage
+from lasagnastack.stages.enhance import EnhanceStage
 from lasagnastack.stages.ingest import IngestStage
 from lasagnastack.stages.render import RenderStage
 
@@ -38,7 +39,7 @@ def _find_brief(input_dir: Path) -> Path:
 
 
 class ReelPipeline(Pipeline):
-    """The five-stage raw video clips → CapCut draft pipeline."""
+    """The six-stage raw video clips → CapCut draft pipeline."""
 
     def __init__(
         self,
@@ -71,6 +72,7 @@ class ReelPipeline(Pipeline):
             AnalyseStage(self._client, max_workers=self._analyse_max_workers),
             DirectStage(self._client),
             CritiqueStage(self._client),
+            EnhanceStage(self._client),
             RenderStage(),
         ]
 
@@ -121,7 +123,7 @@ def run_pipeline(
     ingest_max_workers: int = 2,
     analyse_max_workers: int = 4,
 ) -> None:
-    """Run the full five-stage pipeline.
+    """Run the full six-stage pipeline.
 
     A single ``GeminiClient`` instance is shared across all LLM stages so that
     per-session token and cost totals are accumulated on one object and logged

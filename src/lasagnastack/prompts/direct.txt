@@ -19,6 +19,8 @@ EDITING RULES
 - Cut in/out times must fall within the segment's start–end range.
 
 FIELD DEFINITIONS
+
+CUT FIELDS
 in / out         MM:SS.D format (e.g. 00:03.5). Trim within the segment's start–end window.
 duration_sec     (out - in) in seconds, calculated precisely.
 role             hook | establish_location | payoff_reaction | detail | transition | callout | outro
@@ -27,9 +29,22 @@ crop.offset_x    Fine horizontal nudge, -1.0 (far left) to 1.0 (far right). Use 
 speed            1.0 = normal. 0.5–0.9 for slow-motion reveals; 1.1–2.0 for speed ramps. Default 1.0.
 transition_in    none | cut | fade | dissolve
 transition_out   none | cut | fade | dissolve
-caption.text     ≤ 30 characters of on-screen text. Omit (null) if the shot speaks for itself.
+
+PER-CUT CAPTIONS (clip-scoped — timing is RELATIVE to the cut's own start)
+Use caption when the text belongs to a single clip and must not outlive it.
+caption.text     ≤ 30 characters of on-screen text. Set to null if the shot speaks for itself.
 caption.style    bold | minimal | subtitle
 caption.position top | center | bottom
-caption.in_ms    Milliseconds after cut start when caption appears.
-caption.out_ms   Milliseconds after cut start when caption disappears.
+caption.in_ms    Milliseconds after this cut's start when the caption appears.
+caption.out_ms   Milliseconds after this cut's start when the caption disappears. Must be ≤ the cut's duration_sec × 1000.
 alt_captions     List of {{cut_order: int, texts: [str, ...]}} objects. Include one entry per captioned cut, with 2–3 alternative caption strings for A/B testing.
+
+TIMELINE OVERLAYS (timeline-scoped — timing is ABSOLUTE from reel start)
+Use overlays when text must persist across a cut boundary, e.g. a location title that
+bridges two clips, or a CTA that spans the last 3 seconds of the reel. Leave overlays
+empty ([]) if all on-screen text fits neatly within individual clips.
+overlays[].text      ≤ 40 characters.
+overlays[].style     bold | minimal | subtitle
+overlays[].position  top | center | bottom
+overlays[].start_ms  Absolute milliseconds from reel start when the overlay appears.
+overlays[].end_ms    Absolute milliseconds from reel start when the overlay disappears. Must be > start_ms.

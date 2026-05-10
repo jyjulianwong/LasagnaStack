@@ -11,6 +11,7 @@ import mlflow.entities
 import structlog
 
 from lasagnastack.models.cut_list import CutList
+from lasagnastack.models.enhance import ReelStyle
 from lasagnastack.models.inventory import ClipInventory, NormalisedClip
 
 log = structlog.get_logger()
@@ -27,6 +28,7 @@ class PipelineState:
     normalised_clips: list[NormalisedClip] | None = None
     inventories: list[ClipInventory] | None = None
     cut_list: CutList | None = None
+    reel_style: ReelStyle | None = None
     draft_path: Path | None = None
 
 

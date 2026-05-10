@@ -15,7 +15,7 @@ where...
 `./my_clips/`: a folder of raw video clips in MP4/MOV format + one `.txt` creator brief.  
 `./my_capcut_draft/`: a CapCut draft folder, ready to open in CapCut Desktop.
 
-The pipeline runs in five sequential stages: **ingest** (uses ffmpeg) → **analyse** (uses LLM) → **direct** (uses LLM) → **critique loop** (uses LLM) → **render** (uses pyCapCut).
+The pipeline runs in six sequential stages: **ingest** (uses ffmpeg) → **analyse** (uses LLM) → **direct** (uses LLM) → **critique loop** (uses LLM) → **enhance** (uses LLM) → **render** (uses pyCapCut).
 
 Each stage is a subclass of the `Stage` abstract base class (`base.py`). Adding, removing, or reordering stages requires only editing the `stages` list in `ReelPipeline`. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the full architecture guide.
 
@@ -142,7 +142,7 @@ Runs are named `lasagnastack-{brief_stem}-{4-char-id}` and tagged with the model
 | Critique loop cap | `--critique-max-retries` CLI flag | `2` |
 | Stage 1 worker processes | `--ingest-max-workers` CLI flag | `2` |
 | Stage 2 concurrent LLM calls | `--analyse-max-workers` CLI flag | `4` |
-| Output resolution | `_TARGET_WIDTH` / `_TARGET_HEIGHT` in `src/lasagnastack/stages/ingest.py` | `720×1280` |
+| Output resolution | `_TARGET_WIDTH` / `_TARGET_HEIGHT` in `src/lasagnastack/stages/ingest.py` | `480×854` |
 
 Example — run with a different model:
 
@@ -150,6 +150,10 @@ Example — run with a different model:
 LASAGNASTACK_LLM_MODEL=gemini/gemini-2.5-pro \
   uv run python -m lasagnastack make ./my_clips/ --out ./drafts/test
 ```
+
+## Architecture
+
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) for four annotated diagrams covering the pipeline data flow, the Stage 4 critique loop, the Stage 6 render + CapCut export, and the extensibility model.
 
 ## Get started with Jupyter notebooks
 
@@ -172,10 +176,6 @@ jupyter kernelspec uninstall lasagnastack
 ```bash
 jupyter lab
 ```
-
-## Architecture
-
-See [`ARCHITECTURE.md`](ARCHITECTURE.md) for four annotated diagrams covering the pipeline data flow, the Stage 4 critique loop, the Stage 5 render + CapCut export, and the extensibility model.
 
 ## This repo is cool because...
 

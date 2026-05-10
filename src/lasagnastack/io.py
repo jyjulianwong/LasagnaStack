@@ -45,6 +45,10 @@ def critique_path(output_dir: Path, iteration: int) -> Path:
     return output_dir / "critique" / f"iteration_{iteration}.json"
 
 
+def reel_style_path(output_dir: Path) -> Path:
+    return output_dir / "reel_style.json"
+
+
 def draft_dir(output_dir: Path) -> Path:
     return output_dir / "draft"
 

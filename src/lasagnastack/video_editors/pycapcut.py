@@ -12,6 +12,8 @@ from pycapcut import (
     SEC,
     ClipSettings,
     DraftFolder,
+    TextIntro,
+    TextOutro,
     TextSegment,
     TextStyle,
     Timerange,
@@ -20,8 +22,10 @@ from pycapcut import (
     VideoMaterial,
     VideoSegment,
 )
+from pycapcut.text_segment import TextBorder
 
 from lasagnastack.models.cut_list import CropHint, CutList
+from lasagnastack.models.enhance import CaptionEffect, CutStyle, ReelStyle
 from lasagnastack.video_editors.base import VideoEditorAdapter
 
 log = structlog.get_logger()
@@ -42,6 +46,7 @@ class PyCapCutAdapter(VideoEditorAdapter):
         folder_name: str,
         display_name: str,
         input_dir: Path,
+        reel_style: ReelStyle | None = None,
     ) -> Path:
         """Build a CapCut draft folder from the cut list.
 
@@ -51,10 +56,15 @@ class PyCapCutAdapter(VideoEditorAdapter):
             folder_name: Name for the new draft subfolder.
             display_name: Human-readable project name written into draft_info.json.
             input_dir: Folder containing original source clips.
+            reel_style: Optional per-cut visual styling from Stage 5.
 
         Returns:
             Path to the created draft folder.
         """
+        style_map: dict[int, CutStyle] = {}
+        if reel_style:
+            style_map = {cs.cut_order: cs for cs in reel_style.cut_styles}
+
         script = DraftFolder(str(draft_parent)).create_draft(
             folder_name, _DRAFT_WIDTH, _DRAFT_HEIGHT, _DRAFT_FPS, allow_replace=True
         )
@@ -63,14 +73,16 @@ class PyCapCutAdapter(VideoEditorAdapter):
         script.content["name"] = display_name
         script.add_track(TrackType.video)
 
-        has_captions = any(cut.caption for cut in cut_list.cuts)
-        if has_captions:
+        if any(cut.caption for cut in cut_list.cuts):
             script.add_track(TrackType.text, "captions")
+        for idx in range(len(cut_list.overlays)):
+            script.add_track(TrackType.text, f"overlay_{idx}")
 
-        caption_style = TextStyle(bold=True, align=1, auto_wrapping=True)
+        default_caption_style = TextStyle(bold=True, align=1, auto_wrapping=True)
         timeline_pos = 0
 
         for cut in cut_list.cuts:
+            cut_style = style_map.get(cut.order)
             src_path = input_dir / cut.source_file
             src_start_us = _parse_timestamp(cut.in_)
             src_end_us = _parse_timestamp(cut.out)
@@ -97,12 +109,23 @@ class PyCapCutAdapter(VideoEditorAdapter):
                 clip_settings=clip_settings,
             )
 
-            if cut.transition_out in {"fade", "dissolve"}:
+            transition_type = cut.transition_out
+            if cut_style and cut_style.transition_out:
+                transition_type = cut_style.transition_out.type
+            if transition_type in {"fade", "dissolve"}:
                 seg.add_transition(TransitionType.叠化)
 
             script.add_segment(seg)
 
             if cut.caption:
+                cap_effect = cut_style.caption_effect if cut_style else None
+                cap_style = (
+                    _make_text_style(cap_effect)
+                    if cap_effect
+                    else default_caption_style
+                )
+                border = _make_text_border(cap_effect) if cap_effect else None
+
                 cap_start = timeline_pos + cut.caption.in_ms * 1000
                 cap_end = min(
                     timeline_pos + cut.caption.out_ms * 1000,
@@ -113,15 +136,53 @@ class PyCapCutAdapter(VideoEditorAdapter):
                 txt_seg = TextSegment(
                     cut.caption.text,
                     cap_tr,
-                    style=caption_style,
+                    style=cap_style,
+                    border=border,
                     clip_settings=ClipSettings(
                         transform_y=_caption_y(cut.caption.position)
                     ),
                 )
+
+                if cap_effect:
+                    _apply_text_animations(txt_seg, cap_effect)
+
                 script.add_segment(txt_seg, "captions")
 
             log.info("render_cut", order=cut.order, src=cut.source_file)
             timeline_pos += target_duration_us
+
+        overlay_style_map: dict[int, CaptionEffect] = {}
+        if reel_style:
+            overlay_style_map = {
+                ov_style_entry.overlay_index: ov_style_entry.caption_effect
+                for ov_style_entry in reel_style.overlay_styles
+            }
+
+        for idx, overlay in enumerate(cut_list.overlays):
+            ov_effect = overlay_style_map.get(idx)
+            ov_style = (
+                _make_text_style(ov_effect) if ov_effect else default_caption_style
+            )
+            ov_border = _make_text_border(ov_effect) if ov_effect else None
+            ov_start = overlay.start_ms * 1000
+            ov_end = min(overlay.end_ms * 1000, timeline_pos)
+            ov_tr = Timerange(ov_start, ov_end - ov_start)
+            ov_seg = TextSegment(
+                overlay.text,
+                ov_tr,
+                style=ov_style,
+                border=ov_border,
+                clip_settings=ClipSettings(transform_y=_caption_y(overlay.position)),
+            )
+            if ov_effect:
+                _apply_text_animations(ov_seg, ov_effect)
+            script.add_segment(ov_seg, f"overlay_{idx}")
+            log.info(
+                "render_overlay",
+                index=idx,
+                start_ms=overlay.start_ms,
+                end_ms=overlay.end_ms,
+            )
 
         script.save()
         _patch_platform(draft_parent / folder_name / "draft_info.json")
@@ -203,6 +264,56 @@ def _make_clip_settings(
     shift = base + crop.offset_x * max_shift
     shift = max(-max_shift, min(max_shift, shift))
     return ClipSettings(transform_x=shift)
+
+
+def _hex_to_rgb(hex_color: str) -> tuple[float, float, float]:
+    """Convert '#RRGGBB' to a normalised (r, g, b) tuple in [0, 1]."""
+    h = hex_color.lstrip("#")
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return r / 255.0, g / 255.0, b / 255.0
+
+
+def _make_text_style(effect: CaptionEffect) -> TextStyle:
+    """Build a TextStyle from a CaptionEffect."""
+    return TextStyle(
+        bold=effect.bold,
+        italic=effect.italic,
+        size=effect.size,
+        color=_hex_to_rgb(effect.color),
+        align=1,
+        auto_wrapping=True,
+    )
+
+
+def _make_text_border(effect: CaptionEffect) -> TextBorder | None:
+    """Build a TextBorder from a CaptionEffect, or None if no border is set."""
+    if effect.border_color is None:
+        return None
+    width = effect.border_width if effect.border_width is not None else 40.0
+    return TextBorder(color=_hex_to_rgb(effect.border_color), width=width)
+
+
+_INTRO_MAP: dict[str, TextIntro] = {
+    "fade_in": TextIntro.渐显,
+    "slide_up": TextIntro.向上滑动,
+    "typewriter": TextIntro.打字机_I,
+    "pop": TextIntro.弹出,
+    "bounce": TextIntro.向上弹入,
+}
+
+_OUTRO_MAP: dict[str, TextOutro] = {
+    "fade_out": TextOutro.渐隐,
+    "slide_down": TextOutro.向下滑动,
+    "blur": TextOutro.模糊,
+}
+
+
+def _apply_text_animations(seg: TextSegment, effect: CaptionEffect) -> None:
+    """Attach entrance/exit animations to a TextSegment based on a CaptionEffect."""
+    if effect.animation_in and effect.animation_in in _INTRO_MAP:
+        seg.add_animation(_INTRO_MAP[effect.animation_in])
+    if effect.animation_out and effect.animation_out in _OUTRO_MAP:
+        seg.add_animation(_OUTRO_MAP[effect.animation_out])
 
 
 def _caption_y(position: str) -> float:
