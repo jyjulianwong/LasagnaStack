@@ -22,6 +22,20 @@ For each cut:
 2. caption_effect — ONLY for cuts that have a non-null caption field (clip-scoped text).
    These captions are anchored to their clip and cannot extend past it.
    Set to null if the cut has no caption.
+   - font         One of the keys below, or omit for the CapCut default font.
+                  bebas_neue      — bold condensed display; great for hook/callout text
+                  anton           — heavy impact; punchy hooks and high-energy cuts
+                  cinzel          — elegant classical serif; upscale, refined atmosphere
+                  oswald          — clean modern condensed; versatile mid-reel text
+                  montserrat      — neutral modern sans; safe for most roles
+                  poppins         — friendly rounded sans; subtitles and detail captions
+                  kaushan         — playful script; fun food moments, casual tone
+                  brush           — casual handwritten brush; organic, street-food energy
+                  amatic          — chalkboard/chalk feel; artisan, café, brasserie vibes
+                  permanent_marker — bold marker; loud callouts and emphasis
+                  playfair        — editorial italic serif; mood-driven or quote-style text
+                  nunito          — rounded friendly sans; outro, softer moments
+                  Pick 1–2 fonts for the whole reel and apply them consistently.
    - color        Hex string. White (#FFFFFF) is safe. Use warm tones (#FFD166, #FF6B35) for energy; cool tones (#A0C4FF) for calm.
    - bold         true for hook and callout text; false for subtle subtitle-style captions.
    - italic       Sparingly — use for quotes or poetic tone only.
@@ -37,15 +51,17 @@ These are timeline-level overlays that span cut boundaries; they are NOT tied to
 Reference each overlay by its zero-based index in the overlays array.
 
    overlay_index   Zero-based index of the overlay in CutList.overlays.
-   caption_effect  Same fields as above. Overlays that span a transition benefit from
-                   a fade_in / fade_out to blend gracefully across the cut.
+   caption_effect  Same fields as above (including font). Overlays that span a
+                   transition benefit from a fade_in / fade_out to blend gracefully
+                   across the cut.
 
 STYLE GUIDELINES
-- Maintain visual consistency: pick 1–2 colours and stick to them throughout.
-- Hook and callout cuts deserve bolder, more animated text.
-- Establishing and detail cuts benefit from lighter, less intrusive captions.
+- Maintain visual consistency: pick 1–2 colours and 1–2 fonts and stick to them throughout.
+- Hook and callout cuts deserve bolder, more animated text (bebas_neue or anton work well).
+- Establishing and detail cuts benefit from lighter, less intrusive captions (poppins or montserrat).
 - Outro cuts look polished with a slow fade_out animation.
 - Avoid pop or bounce animations on slow, moody cuts — they clash.
 - Timeline overlays that bridge a cut should use fade_in/fade_out so they feel seamless.
+- Match font personality to the restaurant tone: upscale → cinzel or playfair; casual → brush or amatic; modern → poppins or montserrat.
 
 Respond with a valid ReelStyle JSON only. Include every cut_order in cut_styles.

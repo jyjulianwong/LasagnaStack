@@ -12,6 +12,7 @@ from pycapcut import (
     SEC,
     ClipSettings,
     DraftFolder,
+    FontType,
     TextIntro,
     TextOutro,
     TextSegment,
@@ -136,6 +137,7 @@ class PyCapCutAdapter(VideoEditorAdapter):
                 txt_seg = TextSegment(
                     cut.caption.text,
                     cap_tr,
+                    font=_resolve_font(cap_effect) if cap_effect else None,
                     style=cap_style,
                     border=border,
                     clip_settings=ClipSettings(
@@ -170,6 +172,7 @@ class PyCapCutAdapter(VideoEditorAdapter):
             ov_seg = TextSegment(
                 overlay.text,
                 ov_tr,
+                font=_resolve_font(ov_effect) if ov_effect else None,
                 style=ov_style,
                 border=ov_border,
                 clip_settings=ClipSettings(transform_y=_caption_y(overlay.position)),
@@ -306,6 +309,28 @@ _OUTRO_MAP: dict[str, TextOutro] = {
     "slide_down": TextOutro.向下滑动,
     "blur": TextOutro.模糊,
 }
+
+_FONT_MAP: dict[str, FontType] = {
+    "bebas_neue": FontType.BebasNeue,
+    "anton": FontType.Anton,
+    "cinzel": FontType.CINZEL,
+    "oswald": FontType.Oswald_ExtraLight,
+    "montserrat": FontType.Montserrat,
+    "poppins": FontType.Poppins_Bold,
+    "kaushan": FontType.KaushanScript,
+    "brush": FontType.Brush,
+    "amatic": FontType.Amatic_Bold,
+    "permanent_marker": FontType.PermanentMarker_Regular,
+    "playfair": FontType.PlayfairDisplay_Italic,
+    "nunito": FontType.Nunito,
+}
+
+
+def _resolve_font(effect: CaptionEffect) -> FontType | None:
+    """Map a CaptionEffect's font key to a FontType, or None for the default font."""
+    if effect.font is None:
+        return None
+    return _FONT_MAP.get(effect.font)
 
 
 def _apply_text_animations(seg: TextSegment, effect: CaptionEffect) -> None:

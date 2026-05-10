@@ -4,6 +4,10 @@ from pydantic import BaseModel, Field
 class CaptionEffect(BaseModel):
     """Visual styling for a single caption or overlay text segment."""
 
+    font: str | None = None
+    """Font key. Available values: bebas_neue | anton | cinzel | oswald | montserrat |
+    poppins | kaushan | brush | amatic | permanent_marker | playfair | nunito.
+    Omit to use the CapCut default system font."""
     color: str = "#FFFFFF"
     """Hex text colour, e.g. ``'#FF4500'``."""
     bold: bool = True
