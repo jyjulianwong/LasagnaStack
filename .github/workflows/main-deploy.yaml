@@ -1,0 +1,68 @@
+name: Deploy (main Branch)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  unit_test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⚙️ Set up repository
+        uses: actions/checkout@v3
+
+      - name: ⚙️ Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install uv
+          uv sync --group dev
+
+      - name: 🧪 Run tests
+        run: |
+          uv run pytest tests/ -v
+  
+  version_bump:
+    needs: unit_test
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.psr.outputs.version }}
+      tag: ${{ steps.psr.outputs.tag }}
+      released: ${{ steps.psr.outputs.released }}
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: ⚙️ Set up repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # important for tags
+
+      - name: ⚙️ Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: 📦 Run Semantic Release
+        id: psr
+        uses: python-semantic-release/python-semantic-release@v10
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Show computed version/tag
+        run: |
+          echo "Version:   ${{ steps.psr.outputs.version }}"
+          echo "Tag:       ${{ steps.psr.outputs.tag }}"
+          echo "Released:  ${{ steps.psr.outputs.released }}"
