@@ -8,6 +8,7 @@ from pycapcut import SEC
 from lasagnastack import io
 from lasagnastack.models.cut_list import Caption, CropHint
 from lasagnastack.stages import render
+from lasagnastack.video_editors import pycapcut as _pycapcut
 
 _TS = "20260508_200844"
 
@@ -76,43 +77,43 @@ class TestParseTimestamp:
 
 class TestMakeClipSettings:
     def test_landscape_center_no_shift(self):
-        clip = render._make_clip_settings(
+        clip = _pycapcut._make_clip_settings(
             CropHint(mode="center", offset_x=0.0), 1920, 1080, 1080, 1920
         )
         assert clip.transform_x == pytest.approx(0.0)
 
     def test_landscape_left_third_positive_shift(self):
-        clip = render._make_clip_settings(
+        clip = _pycapcut._make_clip_settings(
             CropHint(mode="left_third", offset_x=0.0), 1920, 1080, 1080, 1920
         )
         assert clip.transform_x > 0.0
 
     def test_landscape_right_third_negative_shift(self):
-        clip = render._make_clip_settings(
+        clip = _pycapcut._make_clip_settings(
             CropHint(mode="right_third", offset_x=0.0), 1920, 1080, 1080, 1920
         )
         assert clip.transform_x < 0.0
 
     def test_left_and_right_are_symmetric(self):
-        left = render._make_clip_settings(
+        left = _pycapcut._make_clip_settings(
             CropHint(mode="left_third", offset_x=0.0), 1920, 1080, 1080, 1920
         )
-        right = render._make_clip_settings(
+        right = _pycapcut._make_clip_settings(
             CropHint(mode="right_third", offset_x=0.0), 1920, 1080, 1080, 1920
         )
         assert left.transform_x == pytest.approx(-right.transform_x)
 
     def test_portrait_source_no_shift(self):
-        clip = render._make_clip_settings(
+        clip = _pycapcut._make_clip_settings(
             CropHint(mode="center", offset_x=0.0), 1080, 1920, 1080, 1920
         )
         assert clip.transform_x == pytest.approx(0.0)
 
     def test_offset_shifts_center(self):
-        base = render._make_clip_settings(
+        base = _pycapcut._make_clip_settings(
             CropHint(mode="center", offset_x=0.0), 1920, 1080, 1080, 1920
         )
-        shifted = render._make_clip_settings(
+        shifted = _pycapcut._make_clip_settings(
             CropHint(mode="center", offset_x=0.5), 1920, 1080, 1080, 1920
         )
         assert shifted.transform_x > base.transform_x
@@ -121,7 +122,7 @@ class TestMakeClipSettings:
 @pytest.fixture(autouse=True)
 def no_capcut(monkeypatch):
     """Disable live CapCut detection for all render tests."""
-    monkeypatch.setattr(render, "_find_capcut_user_data", lambda: None)
+    monkeypatch.setattr(_pycapcut, "_find_capcut_user_data", lambda: None)
 
 
 class TestRun:
@@ -193,7 +194,7 @@ class TestRun:
     def test_returns_output_path_when_capcut_absent(
         self, raw_clip, tmp_path, monkeypatch, fixture_cut_list
     ):
-        monkeypatch.setattr(render, "_find_capcut_user_data", lambda: None)
+        monkeypatch.setattr(_pycapcut, "_find_capcut_user_data", lambda: None)
         result = render.run(fixture_cut_list, tmp_path, raw_clip.parent)
         assert result.parent == io.draft_dir(tmp_path)
 
@@ -202,7 +203,7 @@ class TestRun:
     ):
         fake_capcut = tmp_path / "CapCut" / "User Data"
         (fake_capcut / "Projects" / "com.lveditor.draft").mkdir(parents=True)
-        monkeypatch.setattr(render, "_find_capcut_user_data", lambda: fake_capcut)
+        monkeypatch.setattr(_pycapcut, "_find_capcut_user_data", lambda: fake_capcut)
         result = render.run(fixture_cut_list, tmp_path, raw_clip.parent)
         capcut_drafts = fake_capcut / "Projects" / "com.lveditor.draft"
         assert result.parent == capcut_drafts
@@ -216,15 +217,15 @@ class TestExportToCapCut:
         capcut_drafts = fake_capcut / "Projects" / "com.lveditor.draft"
         capcut_drafts.mkdir(parents=True)
 
-        with mock.patch.object(render, "_find_capcut_user_data", return_value=None):
+        with mock.patch.object(_pycapcut, "_find_capcut_user_data", return_value=None):
             draft_path = render.run(fixture_cut_list, tmp_path / "out", raw_clip.parent)
 
-        render._export_to_capcut(draft_path, raw_clip.parent, fixture_cut_list)
+        _pycapcut._export_to_capcut(draft_path, raw_clip.parent, fixture_cut_list)
 
         with mock.patch.object(
-            render, "_find_capcut_user_data", return_value=fake_capcut
+            _pycapcut, "_find_capcut_user_data", return_value=fake_capcut
         ):
-            dest = render._export_to_capcut(
+            dest = _pycapcut._export_to_capcut(
                 draft_path, raw_clip.parent, fixture_cut_list
             )
 
@@ -236,13 +237,13 @@ class TestExportToCapCut:
         capcut_drafts = fake_capcut / "Projects" / "com.lveditor.draft"
         capcut_drafts.mkdir(parents=True)
 
-        with mock.patch.object(render, "_find_capcut_user_data", return_value=None):
+        with mock.patch.object(_pycapcut, "_find_capcut_user_data", return_value=None):
             draft_path = render.run(fixture_cut_list, tmp_path / "out", raw_clip.parent)
 
         with mock.patch.object(
-            render, "_find_capcut_user_data", return_value=fake_capcut
+            _pycapcut, "_find_capcut_user_data", return_value=fake_capcut
         ):
-            dest = render._export_to_capcut(
+            dest = _pycapcut._export_to_capcut(
                 draft_path, raw_clip.parent, fixture_cut_list
             )
 
@@ -254,9 +255,9 @@ class TestExportToCapCut:
     def test_returns_none_when_capcut_absent(
         self, raw_clip, tmp_path, fixture_cut_list
     ):
-        with mock.patch.object(render, "_find_capcut_user_data", return_value=None):
+        with mock.patch.object(_pycapcut, "_find_capcut_user_data", return_value=None):
             draft_path = render.run(fixture_cut_list, tmp_path / "out", raw_clip.parent)
-            result = render._export_to_capcut(
+            result = _pycapcut._export_to_capcut(
                 draft_path, raw_clip.parent, fixture_cut_list
             )
         assert result is None
@@ -268,14 +269,14 @@ class TestExportToCapCut:
         capcut_drafts = fake_capcut / "Projects" / "com.lveditor.draft"
         capcut_drafts.mkdir(parents=True)
 
-        with mock.patch.object(render, "_find_capcut_user_data", return_value=None):
+        with mock.patch.object(_pycapcut, "_find_capcut_user_data", return_value=None):
             draft_path = render.run(fixture_cut_list, tmp_path / "out", raw_clip.parent)
 
         with mock.patch.object(
-            render, "_find_capcut_user_data", return_value=fake_capcut
+            _pycapcut, "_find_capcut_user_data", return_value=fake_capcut
         ):
-            render._export_to_capcut(draft_path, raw_clip.parent, fixture_cut_list)
-            dest = render._export_to_capcut(
+            _pycapcut._export_to_capcut(draft_path, raw_clip.parent, fixture_cut_list)
+            dest = _pycapcut._export_to_capcut(
                 draft_path, raw_clip.parent, fixture_cut_list
             )
 
@@ -296,13 +297,13 @@ class TestExportToCapCut:
         capcut_drafts = fake_capcut / "Projects" / "com.lveditor.draft"
         capcut_drafts.mkdir(parents=True)
 
-        with mock.patch.object(render, "_find_capcut_user_data", return_value=None):
+        with mock.patch.object(_pycapcut, "_find_capcut_user_data", return_value=None):
             draft_path = render.run(fixture_cut_list, tmp_path / "out", raw_clip.parent)
 
         with mock.patch.object(
-            render, "_find_capcut_user_data", return_value=fake_capcut
+            _pycapcut, "_find_capcut_user_data", return_value=fake_capcut
         ):
-            dest = render._export_to_capcut(
+            dest = _pycapcut._export_to_capcut(
                 draft_path, raw_clip.parent, fixture_cut_list
             )
 
