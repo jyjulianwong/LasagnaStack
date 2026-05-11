@@ -87,12 +87,12 @@ positional arguments:
 
 options:
   --out OUTPUT_DIR              Destination for the CapCut draft and working files
-  --skill SKILL_FILE            Markdown skill file injected into the direct, critique,
-                                and enhance prompts (optional)
+  --skill SKILL_FILE            Path to Markdown skill file injected into the direct, 
+                                critique, and enhance prompt templates (optional)
   --yes, -y                     Auto-confirm all stage prompts
-  --critique-max-retries N      Critique loop cap (default: 2)
-  --ingest-max-workers N        Parallel worker processes for Stage 1 — ingest (default: 2)
-  --analyse-max-workers N       Concurrent LLM calls for Stage 2 — analyse (default: 4)
+  --critique-max-retries N      Maximum # of critique loop retries (default: 2)
+  --ingest-max-workers N        Maximum # of parallel worker processes for `ingest` stage (default: 2)
+  --analyse-max-workers N       Maximum # of concurrent LLM calls for `analyse` stage (default: 4)
 ```
 
 ## Open the draft in CapCut Desktop (macOS)
@@ -176,7 +176,9 @@ jupyter lab
 
 ## This repo is cool because...
 
-- The pipeline is modularlised into stages, with each stage being responsible for transforming the global state of the pipeline run (similar to Google ADK). It is easy to add, remove, or reorder stages.
+- The pipeline is modularlised into stages, with each stage being responsible for transforming the global state of the pipeline run (similar to LangGraph). It is easy to add, remove, or reorder stages.
+- The pipeline supports "skills" -- each user can write their own skill `.md` file to customise the pipeline to their own accounts' styles and branding, or use pre-written skills from marketplaces to cater for different types of reel content.
+- Chain-of-thought reasoning is enabled via Gemini.
 - Human-in-the-loop is deeply integrated in the design, with each stage prompting the user for confirmation before proceeding to the next stage.
 - Prompt caching is enabled to avoid unnecessary LLM calls to reduce latency and cost.
-- The tool is deeply integrated with its host machine. It auto-detects CapCut Desktop, copies all source media (timeline clips and unused footage) into the draft folder, rewrites paths in `draft_info.json`, and registers the project in CapCut's local project registry — so the draft opens in CapCut with no missing-media errors, no manual steps, and all your raw clips already in the import panel.
+- The tool is deeply integrated with its host machine. It auto-detects CapCut Desktop, copies all source media (timeline clips and unused footage) so the project opens in CapCut with no missing-media errors, no manual steps, all your raw clips already in the import panel, and the timeline editor populated and ready to go.
