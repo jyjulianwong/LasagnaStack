@@ -139,18 +139,6 @@ class Pipeline(ABC):
             "critique_max_retries": str(state.critique_max_retries),
         }
 
-    def _log_mlflow_session_metrics(self, state: PipelineState) -> None:
-        """Log session-level metrics to the active MLflow run.
-
-        Called while the MLflow run is still active, immediately after all
-        stages complete. No-op by default. Override to log token counts,
-        cost totals, or other session-level values.
-
-        Args:
-            state: Final pipeline state after all stages have run.
-        """
-        pass
-
     def _run_stage(self, stage: Stage, state: PipelineState) -> PipelineState:
         """Invoke a single stage wrapped in an MLflow CHAIN span.
 
@@ -181,10 +169,6 @@ class Pipeline(ABC):
         CHAIN span. Falls back to uninstrumented execution when MLflow is
         unreachable or unconfigured.
 
-        After all stages complete (and while the run is still active),
-        ``_log_mlflow_session_metrics`` is called so subclasses can log
-        token counts, costs, or other session-level metrics.
-
         Args:
             state: Initial pipeline state.
             auto_confirm: When ``True``, skip the interactive confirmation
@@ -208,9 +192,6 @@ class Pipeline(ABC):
                 state = self._run_stage(stage, state)
                 if i < len(self.stages) - 1:
                     _confirm(stage.completion_message(state), auto_confirm)
-
-            if mlflow.active_run():
-                self._log_mlflow_session_metrics(state)
 
         return state
 

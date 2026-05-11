@@ -40,7 +40,8 @@ All available segments are listed below as JSON. Each segment is identified by i
 - **transition_in** — none | cut | fade | dissolve
 - **transition_out** — none | cut | fade | dissolve
 
-### PER-CUT CAPTIONS (clip-scoped — timing is RELATIVE to the cut's own start)
+### PER-CUT CAPTIONS 
+*Clip-scoped — timing is RELATIVE to the cut's own start.*
 Use caption when the text belongs to a single clip and must not outlive it.
 
 - **caption.text** — ≤ 30 characters of on-screen text. Set to null if the shot speaks for itself.
@@ -50,7 +51,8 @@ Use caption when the text belongs to a single clip and must not outlive it.
 - **caption.out_ms** — Milliseconds after this cut's start when the caption disappears. Must be ≤ the cut's duration_sec × 1000.
 - **alt_captions** — List of {{cut_order: int, texts: [str, ...]}} objects. Include one entry per captioned cut, with 2–3 alternative caption strings for A/B testing.
 
-### TIMELINE OVERLAYS (timeline-scoped — timing is ABSOLUTE from reel start)
+### TIMELINE OVERLAYS 
+*Timeline-scoped — timing is ABSOLUTE from reel start.*
 Use overlays when text must persist across a cut boundary, e.g. a location title that bridges two clips, or a CTA that spans the last 3 seconds of the reel. Leave overlays empty ([]) if all on-screen text fits neatly within individual clips.
 
 - **overlays[].text** — ≤ 40 characters.

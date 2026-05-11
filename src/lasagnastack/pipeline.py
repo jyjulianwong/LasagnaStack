@@ -2,7 +2,6 @@ import os
 import uuid
 from pathlib import Path
 
-import mlflow
 import structlog
 
 from lasagnastack import io
@@ -45,22 +44,35 @@ class ReelPipeline(Pipeline):
 
     def __init__(
         self,
-        client: LLMClient | None = None,
         ingest_max_workers: int = 2,
         analyse_max_workers: int = 4,
+        analyse_client: LLMClient | None = None,
+        direct_client: LLMClient | None = None,
+        critique_client: LLMClient | None = None,
+        enhance_client: LLMClient | None = None,
+        post_caption_client: LLMClient | None = None,
     ) -> None:
-        """Initialise the pipeline with an optional shared LLM client.
+        """Initialise the pipeline with optional per-stage LLM clients.
+
+        Each LLM-backed stage accepts its own client. When ``None``, the stage
+        constructs a fresh ``GeminiClient`` internally.
 
         Args:
-            client: LLM client injected into every LLM-backed stage. Defaults
-                to a freshly constructed ``GeminiClient`` per stage when
-                ``None``.
             ingest_max_workers: Parallel worker processes for Stage 1.
             analyse_max_workers: Concurrent LLM calls for Stage 2.
+            analyse_client: LLM client for Stage 2 (analyse).
+            direct_client: LLM client for Stage 3 (direct).
+            critique_client: LLM client for Stage 4 (critique).
+            enhance_client: LLM client for Stage 5 (enhance).
+            post_caption_client: LLM client for Stage 7 (post caption).
         """
-        self._client = client
         self._ingest_max_workers = ingest_max_workers
         self._analyse_max_workers = analyse_max_workers
+        self._analyse_client = analyse_client
+        self._direct_client = direct_client
+        self._critique_client = critique_client
+        self._enhance_client = enhance_client
+        self._post_caption_client = post_caption_client
 
     @property
     def stages(self) -> list[Stage]:
@@ -71,12 +83,14 @@ class ReelPipeline(Pipeline):
         """
         return [
             IngestStage(max_workers=self._ingest_max_workers),
-            AnalyseStage(self._client, max_workers=self._analyse_max_workers),
-            DirectStage(self._client),
-            CritiqueStage(self._client),
-            EnhanceStage(self._client),
+            AnalyseStage(
+                client=self._analyse_client, max_workers=self._analyse_max_workers
+            ),
+            DirectStage(client=self._direct_client),
+            CritiqueStage(client=self._critique_client),
+            EnhanceStage(client=self._enhance_client),
             RenderStage(),
-            PostCaptionStage(self._client),
+            PostCaptionStage(client=self._post_caption_client),
         ]
 
     def _mlflow_run_name(self, state: PipelineState) -> str:
@@ -104,19 +118,6 @@ class ReelPipeline(Pipeline):
             "model": os.getenv("LASAGNASTACK_LLM_MODEL", "gemini/gemini-2.5-flash"),
         }
 
-    def _log_mlflow_session_metrics(self, state: PipelineState) -> None:
-        """Log GeminiClient token and cost totals to the active MLflow run.
-
-        Only logs when ``self._client`` is a ``GeminiClient`` instance
-        (i.e. an explicit client was injected).
-
-        Args:
-            state: Final pipeline state (unused; present for interface
-                compatibility).
-        """
-        if isinstance(self._client, GeminiClient):
-            mlflow.log_metrics(self._client.session_stats)
-
 
 def run_pipeline(
     input_dir: Path,
@@ -129,9 +130,7 @@ def run_pipeline(
 ) -> None:
     """Run the full seven-stage pipeline.
 
-    A single ``GeminiClient`` instance is shared across all LLM stages so that
-    per-session token and cost totals are accumulated on one object and logged
-    to MLflow via ``_log_mlflow_session_metrics`` on ``ReelPipeline``.
+    A dedicated ``GeminiClient`` instance is created for each LLM-backed stage.
     MLflow tracking is optional — the pipeline runs normally if the server is
     unreachable.
 
@@ -158,11 +157,14 @@ def run_pipeline(
         critique_max_retries=critique_max_retries,
     )
 
-    client = GeminiClient()
     state = ReelPipeline(
-        client,
         ingest_max_workers=ingest_max_workers,
         analyse_max_workers=analyse_max_workers,
+        analyse_client=GeminiClient(thinking_budget=4000),
+        direct_client=GeminiClient(thinking_budget=12000),
+        critique_client=GeminiClient(thinking_budget=12000),
+        enhance_client=GeminiClient(thinking_budget=4000),
+        post_caption_client=GeminiClient(thinking_budget=4000),
     ).run(state, auto_confirm=auto_confirm)
 
     log.info("pipeline_complete", draft=str(state.draft_path))
