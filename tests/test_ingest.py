@@ -39,7 +39,7 @@ class TestNormaliseClip:
         assert dest.exists()
         assert dest.stat().st_size > 0
 
-    def test_output_is_portrait_720x1280(self, raw_clip, tmp_path):
+    def test_output_is_portrait_480x854(self, raw_clip, tmp_path):
         dest = tmp_path / "norm.mp4"
         ingest._normalise_clip(raw_clip, dest)
         probe = ffmpeg.probe(str(dest))

@@ -32,7 +32,7 @@ def _build_parser() -> argparse.ArgumentParser:
     make.add_argument(
         "--ingest-max-workers",
         type=int,
-        default=1,
+        default=2,
         metavar="N",
         help="Parallel worker processes for Stage 1 — ingest (default: 1).",
     )

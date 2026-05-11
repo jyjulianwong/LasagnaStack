@@ -78,14 +78,17 @@ uv run python -m lasagnastack make ./my_clips/ --out ./drafts/reel_2025_05_05 --
 Full CLI reference:
 
 ```
-usage: lasagnastack make [-h] --out OUTPUT_DIR [--yes] [--critique-max-retries N]
-                         [--ingest-max-workers N] [--analyse-max-workers N] INPUT_DIR
+usage: lasagnastack make [-h] --out OUTPUT_DIR [--skill SKILL_FILE] [--yes]
+                         [--critique-max-retries N] [--ingest-max-workers N]
+                         [--analyse-max-workers N] INPUT_DIR
 
 positional arguments:
   INPUT_DIR                     Folder containing clips and brief .txt
 
 options:
   --out OUTPUT_DIR              Destination for the CapCut draft and working files
+  --skill SKILL_FILE            Markdown skill file injected into the direct, critique,
+                                and enhance prompts (optional)
   --yes, -y                     Auto-confirm all stage prompts
   --critique-max-retries N      Critique loop cap (default: 2)
   --ingest-max-workers N        Parallel worker processes for Stage 1 — ingest (default: 2)
@@ -139,6 +142,7 @@ Runs are named `lasagnastack-{brief_stem}-{4-char-id}` and tagged with the model
 |---|---|---|
 | Gemini API key | `GEMINI_API_KEY` env var (required) | — |
 | LLM model | `LASAGNASTACK_LLM_MODEL` env var | `gemini/gemini-2.5-flash` |
+| Skill file | `--skill` CLI flag | — |
 | Critique loop cap | `--critique-max-retries` CLI flag | `2` |
 | Stage 1 worker processes | `--ingest-max-workers` CLI flag | `2` |
 | Stage 2 concurrent LLM calls | `--analyse-max-workers` CLI flag | `4` |
