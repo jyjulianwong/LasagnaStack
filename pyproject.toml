@@ -26,6 +26,9 @@ dependencies = [
     "tenacity>=9.0.0",
 ]
 
+[project.scripts]
+lasagnastack = "lasagnastack.cli:main"
+
 [dependency-groups]
 dev = [
     "pre-commit>=4.2.0",
