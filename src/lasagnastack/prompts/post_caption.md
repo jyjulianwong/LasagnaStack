@@ -22,10 +22,10 @@ The following descriptions summarise the footage used in this reel:
 ```
 
 ## YOUR TASK
-Write a single Instagram post caption. Structure it with these sections in order:
+Write a single Instagram post caption. Aim for 100-200 words. Structure it with these sections in order:
 
 1. **Hook line** — One punchy opening sentence that names what makes this restaurant or dish special. Should be scroll-stopping and make the reader want to watch or visit.
-2. **Narrative body** — 2–4 short paragraphs covering the creator's experience: what they ordered, what stood out, atmosphere or service observations worth sharing.
+2. **Narrative body** — 1–3 short paragraphs covering the creator's experience: what they ordered, what stood out, atmosphere or service observations worth sharing.
 3. **Recommendation note** — A practical tip on how to order or what to prioritise.
 4. **Price/value context** — One honest sentence on value for money (avoid promotional language).
 5. **CTA paragraph** — A call to action encouraging the audience to engage.
