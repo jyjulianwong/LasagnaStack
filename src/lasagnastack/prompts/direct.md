@@ -25,8 +25,8 @@ All available segments are listed below as JSON. Each segment is identified by i
 - Prefer aesthetic_score ≥ 6. Avoid back-to-back cuts with the same shot_type.
 - Cut in/out times must fall within the segment's start–end range.
 - Captions and overlays that might appear at the same time must not overlap each other. Adjust the x and y positioning accordingly.
-- Consider an opening title overlay that identifies the subject of the reel (e.g. the location, dish, or concept). Place it as a timeline overlay spanning the first 2–3 seconds so it bridges the opening clip. Always use position center to be within the safe zone. Follow any title card format specified in the account skill.
-- Consider a closing CTA overlay prompting the viewer to follow or engage. Place it as a timeline overlay spanning the last 3–5 seconds of the reel. Always use position center to be within the safe zone. Follow any CTA copy or branding format specified in the account skill.
+- Consider an opening title overlay that identifies the subject of the reel (e.g. the location, dish, or concept). Place it as a timeline overlay spanning the first 2–3 seconds so it bridges the opening clip. If text is long, use position 'center' to be within the safe zone. Follow any title card format specified in the account skill.
+- Consider a closing CTA overlay prompting the viewer to follow or engage. Place it as a timeline overlay spanning the last 3–5 seconds of the reel. If text is long, use position 'center' to be within the safe zone. Follow any CTA copy or branding format specified in the account skill.
 
 ## FIELD DEFINITIONS
 
@@ -57,6 +57,6 @@ Use overlays when text must persist across a cut boundary, e.g. a location title
 
 - **overlays[].text** — ≤ 40 characters.
 - **overlays[].style** — bold | minimal | subtitle
-- **overlays[].position** — top | center | bottom. Title and CTA overlays must always use 'center' to be within the safe zone.
+- **overlays[].position** — top | center | bottom. Title and CTA overlays with long text must use position 'center' to be within the safe zone.
 - **overlays[].start_ms** — Absolute milliseconds from reel start when the overlay appears.
 - **overlays[].end_ms** — Absolute milliseconds from reel start when the overlay disappears. Must be > start_ms.

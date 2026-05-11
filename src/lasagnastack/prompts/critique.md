@@ -38,7 +38,7 @@ Check each and report failures as issues. Use as reference, but in case of confl
 7. **Story arc** — Follows hook → build → payoff → memorable close.
 8. **Brief** — The edit clearly serves the stated subject, tone, and mood from the brief.
 9. **Captions** — caption.out_ms must not exceed the cut's duration_sec × 1000. Timing is clip-relative. Texts that might appear at the same time must not overlap each other in positioning.
-10. **Overlays** — Each overlay's end_ms must be > start_ms. Both must fall within the total reel duration (sum of duration_sec × 1000). Overlays must only be used when text genuinely needs to span a cut boundary; single-clip text belongs in caption, not overlays. Texts that might appear at the same time must not overlap each other in positioning. Title and CTA overlays must use position center to be within the safe zone.
+10. **Overlays** — Each overlay's end_ms must be > start_ms. Both must fall within the total reel duration (sum of duration_sec × 1000). Overlays must only be used when text genuinely needs to span a cut boundary; single-clip text belongs in caption, not overlays. Texts that might appear at the same time must not overlap each other in positioning. Title and CTA overlays with long text must use position 'center' to be within the safe zone.
 
 ## RESPONSE RULES
 - All criteria pass: set verdict "approved", leave issues empty, cut_list_v2 null.
