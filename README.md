@@ -108,6 +108,8 @@ Open CapCut Desktop after the pipeline finishes — the draft will appear on the
 
 If CapCut is not installed, the draft is written to `<output_dir>/draft/LasagnaStack - {reel_name}/` and you can copy it manually.
 
+> This has been tested with CapCut Desktop 8.5.0 on macOS Sequoia 15.6.1. There may be issues with older versions or other operating systems.
+
 ## Track LLM costs with MLflow
 
 Every pipeline run is automatically traced with [MLflow](https://mlflow.org). Each Gemini API call is recorded as a span (prompt, response, token counts, latency, and estimated USD cost). Session-level totals are written to the run when the pipeline finishes.
