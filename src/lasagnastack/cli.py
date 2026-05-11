@@ -5,7 +5,7 @@ from pathlib import Path
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="lasagnastack",
-        description="Turn raw video clips into an editable CapCut draft for short-form video and reel editing.",
+        description="An AI pipeline that turns raw video clips into an editable CapCut project for short-form reel editing.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 

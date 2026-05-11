@@ -7,7 +7,7 @@ An AI pipeline that turns raw video clips into an editable CapCut project for sh
 It is as simple as:
 
 ```bash
-python -m lasagnastack make ./my_clips/ --out ./my_capcut_draft/
+lasagnastack make ./my_clips/ --out ./my_capcut_draft/
 ```
 
 where...
@@ -18,6 +18,21 @@ where...
 The pipeline runs in six sequential stages: **ingest** (uses ffmpeg) → **analyse** (uses LLM) → **direct** (uses LLM) → **critique loop** (uses LLM) → **enhance** (uses LLM) → **render** (uses pyCapCut).
 
 Each stage is a subclass of the `Stage` abstract base class (`base.py`). Adding, removing, or reordering stages requires only editing the `stages` list in `ReelPipeline`. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the full architecture guide.
+
+## Installation
+
+Install via Homebrew:
+
+```bash
+brew tap jyjulianwong/lasagnastack                                                                                                  
+brew install lasagnastack
+```
+
+Install via PyPI:
+
+```bash
+pip install lasagnastack
+```
 
 ## Get started with development
 
