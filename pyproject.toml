@@ -101,3 +101,6 @@ ignore-missing-source = false
 bad-assignment = false
 # Disable `bad-return` errors
 bad-return = false
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
