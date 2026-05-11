@@ -13,6 +13,7 @@ import structlog
 from lasagnastack.models.cut_list import CutList
 from lasagnastack.models.enhance import ReelStyle
 from lasagnastack.models.inventory import ClipInventory, NormalisedClip
+from lasagnastack.models.post_caption import PostCaption
 
 log = structlog.get_logger()
 
@@ -31,6 +32,7 @@ class PipelineState:
     cut_list: CutList | None = None
     reel_style: ReelStyle | None = None
     draft_path: Path | None = None
+    post_caption: PostCaption | None = None
 
 
 @contextmanager

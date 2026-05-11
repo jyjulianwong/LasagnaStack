@@ -5,6 +5,7 @@ from pathlib import Path
 import mlflow
 import structlog
 
+from lasagnastack import io
 from lasagnastack.base import Pipeline, PipelineState, Stage
 from lasagnastack.llm.base import LLMClient
 from lasagnastack.llm.gemini import GeminiClient
@@ -13,6 +14,7 @@ from lasagnastack.stages.critique import CritiqueStage
 from lasagnastack.stages.direct import DirectStage
 from lasagnastack.stages.enhance import EnhanceStage
 from lasagnastack.stages.ingest import IngestStage
+from lasagnastack.stages.post_caption import PostCaptionStage
 from lasagnastack.stages.render import RenderStage
 
 log = structlog.get_logger()
@@ -39,7 +41,7 @@ def _find_brief(input_dir: Path) -> Path:
 
 
 class ReelPipeline(Pipeline):
-    """The six-stage raw video clips → CapCut draft pipeline."""
+    """The seven-stage raw video clips → CapCut draft + post caption pipeline."""
 
     def __init__(
         self,
@@ -62,7 +64,7 @@ class ReelPipeline(Pipeline):
 
     @property
     def stages(self) -> list[Stage]:
-        """Return the five pipeline stages in execution order.
+        """Return the seven pipeline stages in execution order.
 
         Returns:
             Ordered list of ``Stage`` instances.
@@ -74,6 +76,7 @@ class ReelPipeline(Pipeline):
             CritiqueStage(self._client),
             EnhanceStage(self._client),
             RenderStage(),
+            PostCaptionStage(self._client),
         ]
 
     def _mlflow_run_name(self, state: PipelineState) -> str:
@@ -124,7 +127,7 @@ def run_pipeline(
     ingest_max_workers: int = 2,
     analyse_max_workers: int = 4,
 ) -> None:
-    """Run the full six-stage pipeline.
+    """Run the full seven-stage pipeline.
 
     A single ``GeminiClient`` instance is shared across all LLM stages so that
     per-session token and cost totals are accumulated on one object and logged
@@ -164,3 +167,4 @@ def run_pipeline(
 
     log.info("pipeline_complete", draft=str(state.draft_path))
     print(f"\nDraft saved to: {state.draft_path}")
+    print(f"Post caption saved to: {io.post_caption_path(output_dir)}")
