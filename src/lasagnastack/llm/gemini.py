@@ -332,6 +332,7 @@ class GeminiClient(LLMClient):
                     "output_cost_usd": output_cost,
                     "thinking_tokens": thinking_tokens,
                     "thinking_cost_usd": thinking_cost,
+                    "total_tokens": total_tokens,
                     "total_cost_usd": total_cost,
                     "latency_sec": latency_sec,
                     "prompt_hash": ph,
