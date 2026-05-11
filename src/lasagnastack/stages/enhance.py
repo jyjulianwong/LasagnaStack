@@ -20,6 +20,7 @@ def run(
     brief_path: Path,
     output_dir: Path,
     client: LLMClient | None = None,
+    skill_path: Path | None = None,
 ) -> ReelStyle:
     """Generate visual styling for the approved cut list.
 
@@ -32,6 +33,8 @@ def run(
         brief_path: Path to the freeform .txt creator brief.
         output_dir: Pipeline root; reel_style.json written here.
         client: LLM client to use. Defaults to GeminiClient.
+        skill_path: Optional path to a Markdown skill file injected into the
+            prompt before the creator brief.
 
     Returns:
         A ReelStyle ready for the render stage.
@@ -39,7 +42,7 @@ def run(
     if client is None:
         client = GeminiClient()
 
-    prompt = _build_prompt(cut_list, brief_path)
+    prompt = _build_prompt(cut_list, brief_path, skill_path)
     captioned = sum(1 for cut in cut_list.cuts if cut.caption)
     log.info("enhance_start", cuts=len(cut_list.cuts), captioned=captioned)
 
@@ -50,14 +53,20 @@ def run(
     return reel_style
 
 
-def _build_prompt(cut_list: CutList, brief_path: Path) -> str:
+def _build_prompt(
+    cut_list: CutList,
+    brief_path: Path,
+    skill_path: Path | None = None,
+) -> str:
     template = (
         importlib.resources.files("lasagnastack.prompts")
-        .joinpath("enhance.txt")
+        .joinpath("enhance.md")
         .read_text(encoding="utf-8")
     )
     cut_list_json = json.dumps(cut_list.model_dump(by_alias=True), indent=2)
+    skill_text = skill_path.read_text(encoding="utf-8").strip() if skill_path else ""
     return template.format(
+        skill_text=skill_text,
         brief_text=brief_path.read_text(encoding="utf-8").strip(),
         cut_list_json=cut_list_json,
     )
@@ -85,7 +94,11 @@ class EnhanceStage(Stage):
         """
         assert state.cut_list is not None
         reel_style = run(
-            state.cut_list, state.brief_path, state.output_dir, self._client
+            state.cut_list,
+            state.brief_path,
+            state.output_dir,
+            self._client,
+            state.skill_path,
         )
         return dataclasses.replace(state, reel_style=reel_style)
 

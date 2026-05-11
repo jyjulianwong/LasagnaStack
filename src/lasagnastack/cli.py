@@ -13,6 +13,13 @@ def _build_parser() -> argparse.ArgumentParser:
     make.add_argument("input_dir", type=Path, metavar="INPUT_DIR")
     make.add_argument("--out", type=Path, required=True, metavar="OUTPUT_DIR")
     make.add_argument(
+        "--skill",
+        type=Path,
+        default=None,
+        metavar="SKILL_FILE",
+        help="Path to a Markdown skill file injected into the direct, critique, and enhance prompts.",
+    )
+    make.add_argument(
         "--yes", "-y", action="store_true", help="Auto-confirm all stage prompts."
     )
     make.add_argument(
@@ -58,6 +65,7 @@ def main() -> None:
         run_pipeline(
             input_dir=args.input_dir,
             output_dir=args.out,
+            skill_path=args.skill,
             auto_confirm=args.yes,
             critique_max_retries=args.critique_max_retries,
             ingest_max_workers=args.ingest_max_workers,

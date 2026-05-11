@@ -118,6 +118,7 @@ class ReelPipeline(Pipeline):
 def run_pipeline(
     input_dir: Path,
     output_dir: Path,
+    skill_path: Path | None = None,
     auto_confirm: bool = False,
     critique_max_retries: int = 2,
     ingest_max_workers: int = 2,
@@ -136,6 +137,8 @@ def run_pipeline(
             creator brief.
         output_dir: Root directory for all pipeline outputs (normalised clips,
             inventories, cut list, critique JSONs, and the CapCut draft).
+        skill_path: Optional path to a Markdown skill file injected into the
+            direct, critique, and enhance prompt templates.
         auto_confirm: When ``True``, skip the interactive confirmation prompt
             between stages.
         critique_max_retries: Maximum number of critique iterations before the
@@ -148,6 +151,7 @@ def run_pipeline(
         input_dir=input_dir,
         output_dir=output_dir,
         brief_path=brief_path,
+        skill_path=skill_path,
         critique_max_retries=critique_max_retries,
     )
 
