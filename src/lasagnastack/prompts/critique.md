@@ -26,7 +26,7 @@ You are a harsh but fair senior video editor reviewing an Instagram Reel cut lis
 ```
 
 ## REVIEW CRITERIA — check each and report failures as issues
-1. **Duration** — Sum of Cut.duration_sec must be 30–60 seconds. Average cut length of 1-2 seconds, with motion cuts having slightly longer lengths. The final CTA cut should be 2-4 seconds.
+1. **Duration** — Sum of Cut.duration_sec must be 30–60 seconds. Average cut length of 1-2 seconds, with motion cuts having slightly longer lengths. Any ending or CTA cut should be 2-4 seconds.
 2. **Cut count** — 8–15 cuts.
 3. **Opening** — First cut must have role "hook".
 4. **Shot variety** — No more than 2 consecutive cuts with the same shot_type.

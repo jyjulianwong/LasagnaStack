@@ -19,7 +19,7 @@ All available segments are listed below as JSON. Each segment is identified by i
 
 ## EDITING RULES
 - Total duration: the sum of all Cut.duration_sec values must be 30–60 seconds.
-- Use 8–15 cuts. Average cut length of 1-2 seconds, with motion cuts having slightly longer lengths. The final CTA cut should be 2-4 seconds.
+- Use 8–15 cuts. Average cut length of 1-2 seconds, with motion cuts having slightly longer lengths. Any ending or CTA cut should be 2-4 seconds.
 - Open with the segment that has the highest hook_potential. Build to a payoff. End memorably.
 - Prefer vertical_crop_safe: true segments. Only use false if no alternative exists for that role.
 - Prefer aesthetic_score ≥ 6. Avoid back-to-back cuts with the same shot_type.

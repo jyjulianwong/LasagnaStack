@@ -48,7 +48,7 @@ Set to null if the cut has no caption.
 - **color** — Hex string. White (#FFFFFF) is safe. Use warm tones (#FFD166, #FF6B35) for energy. Follow any colour guidance in the account skill.
 - **bold** — true for hook and callout text; false for subtle subtitle-style captions.
 - **italic** — Sparingly — use for quotes or poetic tone only.
-- **size** — 4.0–20.0 CapCut units. Default 8.0. Go larger (10–14) for short punchy captions; smaller (6–8) for longer subtitle text.
+- **size** — in CapCut units. By default, use ~18-20 for title cards; use ~12-16 for mid-reel captions and ending CTA overlays. Go larger for short punchy captions; smaller for longer subtitle text. Follow any size guidance in the account skill.
 - **border_color** — Hex string for text stroke (e.g. "#000000"). Use when text sits over a busy background. Omit otherwise.
 - **border_width** — 0–100. Typical value: 30–50 if using a border. Required only when border_color is set.
 - **animation_in** — One of: fade_in | slide_up | typewriter | pop | bounce. Match the energy of the cut role.
