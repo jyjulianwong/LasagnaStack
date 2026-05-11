@@ -131,8 +131,7 @@ MLFLOW_EXPERIMENT_NAME=lasagnastack
 
 **3. Run the pipeline as normal.** Open `http://localhost:5000` in your browser to watch live.
 
-- **Traces tab** — spans appear in real time as stages progress. Each trace has three levels: the top-level pipeline span (`ReelPipeline.run`), a per-stage span (e.g. `AnalyseStage.run`), and individual LLM call spans (`GeminiClient._call_api`) nested inside.
-- **Metrics tab** — `total_input_tokens`, `total_output_tokens`, `total_cost_usd`, and `llm_call_count` are written once the run completes.
+In **Experiments -> lasagnastack -> Traces**, spans appear in real time as stages progress. Each trace has three levels: the top-level pipeline span (`ReelPipeline.run`), a per-stage span (e.g. `AnalyseStage.run`), and individual LLM call spans (`GeminiClient._call_api`) nested inside.
 
 Runs are named `lasagnastack-{brief_stem}-{4-char-id}` and tagged with the model, reel name, and `critique_max_retries`.
 
@@ -142,20 +141,12 @@ Runs are named `lasagnastack-{brief_stem}-{4-char-id}` and tagged with the model
 
 | Parameter | How to set | Default |
 |---|---|---|
-| Gemini API key | `GEMINI_API_KEY` env var (required) | — |
-| LLM model | `LASAGNASTACK_LLM_MODEL` env var | `gemini/gemini-2.5-flash` |
-| Skill file | `--skill` CLI flag | — |
-| Critique loop cap | `--critique-max-retries` CLI flag | `2` |
-| Stage 1 worker processes | `--ingest-max-workers` CLI flag | `2` |
-| Stage 2 concurrent LLM calls | `--analyse-max-workers` CLI flag | `4` |
-| Output resolution | `_TARGET_WIDTH` / `_TARGET_HEIGHT` in `src/lasagnastack/stages/ingest.py` | `480×854` |
-
-Example — run with a different model:
-
-```bash
-LASAGNASTACK_LLM_MODEL=gemini/gemini-2.5-pro \
-  uv run python -m lasagnastack make ./my_clips/ --out ./drafts/test
-```
+| Gemini API key | `GEMINI_API_KEY` env. var. (required) | — |
+| LLM model | `LASAGNASTACK_LLM_MODEL` env. var. | `gemini/gemini-2.5-flash` |
+| Path to skill file | `--skill` CLI flag | — |
+| `critique` stage maximum # of retries | `--critique-max-retries` CLI flag | `2` |
+| `ingest` stage maximum # of worker processes | `--ingest-max-workers` CLI flag | `2` |
+| `analyse` stage maximum # of concurrent LLM calls | `--analyse-max-workers` CLI flag | `4` |
 
 ## Architecture
 
