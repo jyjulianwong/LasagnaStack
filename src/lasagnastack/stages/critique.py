@@ -23,8 +23,9 @@ def run(
     inventories: list[ClipInventory],
     brief_path: Path,
     output_dir: Path,
-    max_retries: int = _MAX_RETRIES_DEFAULT,
     client: LLMClient | None = None,
+    skill_path: Path | None = None,
+    max_retries: int = _MAX_RETRIES_DEFAULT,
 ) -> CutList:
     """Run the critique loop, replacing the cut list on revision until approved or capped.
 
@@ -35,8 +36,10 @@ def run(
         inventories: Segment inventories (for context).
         brief_path: Path to the creator brief.
         output_dir: Pipeline root; critique JSONs written here.
-        max_retries: Maximum critique iterations before shipping as-is.
         client: LLM client to use. Defaults to GeminiClient.
+        skill_path: Optional path to a Markdown skill file injected into the
+            prompt before the creator brief.
+        max_retries: Maximum critique iterations before shipping as-is.
 
     Returns:
         The approved (or capped) CutList.
@@ -47,7 +50,13 @@ def run(
     previous_issues: list[list[str]] = []
     for iteration in range(max_retries):
         result = _critique_once(
-            cut_list, inventories, brief_path, client, iteration, previous_issues
+            cut_list,
+            inventories,
+            brief_path,
+            client,
+            iteration,
+            previous_issues,
+            skill_path,
         )
         io.write_json(result, io.critique_path(output_dir, iteration))
 
@@ -70,8 +79,11 @@ def _critique_once(
     client: LLMClient,
     iteration: int,
     previous_issues: list[list[str]],
+    skill_path: Path | None = None,
 ) -> CritiqueResult:
-    prompt = _build_prompt(cut_list, inventories, brief_path, previous_issues)
+    prompt = _build_prompt(
+        cut_list, inventories, brief_path, previous_issues, skill_path
+    )
     log.info("critique_start", iteration=iteration)
     result: CritiqueResult = client.generate(prompt, CritiqueResult, temperature=0.3)
     log.info(
@@ -88,10 +100,11 @@ def _build_prompt(
     inventories: list[ClipInventory],
     brief_path: Path,
     previous_issues: list[list[str]],
+    skill_path: Path | None = None,
 ) -> str:
     template = (
         importlib.resources.files("lasagnastack.prompts")
-        .joinpath("critique.txt")
+        .joinpath("critique.md")
         .read_text(encoding="utf-8")
     )
     cut_list_json = json.dumps(cut_list.model_dump(by_alias=True), indent=2)
@@ -104,7 +117,9 @@ def _build_prompt(
         previous_issues_text = "\n".join(issues_lines)
     else:
         previous_issues_text = "None — this is the first review."
+    skill_text = skill_path.read_text(encoding="utf-8").strip() if skill_path else ""
     return template.format(
+        skill_text=skill_text,
         brief_text=brief_path.read_text(encoding="utf-8").strip(),
         inventories_json=inventories_json,
         cut_list_json=cut_list_json,
@@ -124,10 +139,11 @@ class CritiqueStage(Stage):
             state.inventories,
             state.brief_path,
             state.output_dir,
-            max_retries=state.critique_max_retries,
             client=self._client,
+            skill_path=state.skill_path,
+            max_retries=state.critique_max_retries,
         )
         return dataclasses.replace(state, cut_list=cut_list)
 
     def completion_message(self, state: PipelineState) -> str:
-        return "Stage 4 complete — cut list approved. Continue to Stage 5 (render)?"
+        return "Stage 4 complete — cut list approved. Continue to Stage 5 (enhance)?"

@@ -63,7 +63,7 @@ def run(
     output_dir: Path,
     max_workers: int = 1,
 ) -> list[NormalisedClip]:
-    """Normalise all clips to 720×1280 H.264 and detect scene cuts.
+    """Normalise all clips to 480×854 H.264 and detect scene cuts.
 
     Args:
         input_dir: Folder containing raw MP4/MOV clips and the brief .txt.
@@ -111,7 +111,7 @@ def _find_clips(input_dir: Path) -> list[Path]:
 
 
 def _normalise_clip(src: Path, dest: Path) -> float:
-    """Re-encode src to 720×1280 H.264/AAC at dest. Returns source duration in seconds."""
+    """Re-encode src to 480×854 H.264/AAC at dest. Returns source duration in seconds."""
     probe = ffmpeg.probe(str(src))
     duration = float(probe["format"]["duration"])
     has_audio = any(s["codec_type"] == "audio" for s in probe["streams"])

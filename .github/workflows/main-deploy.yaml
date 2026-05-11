@@ -1,0 +1,140 @@
+name: Deploy (main Branch)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit_test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⚙️ Set up repository
+        uses: actions/checkout@v3
+
+      - name: ⚙️ Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install uv
+          uv sync --group dev
+
+      - name: 🧪 Run tests
+        run: |
+          uv run pytest tests/ -v
+  
+  version_bump:
+    needs: unit_test
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.psr.outputs.version }}
+      tag: ${{ steps.psr.outputs.tag }}
+      released: ${{ steps.psr.outputs.released }}
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: ⚙️ Set up repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # important for tags
+
+      - name: ⚙️ Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: 📦 Run Semantic Release
+        id: psr
+        uses: python-semantic-release/python-semantic-release@v10
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Show computed version/tag
+        run: |
+          echo "Version:   ${{ steps.psr.outputs.version }}"
+          echo "Tag:       ${{ steps.psr.outputs.tag }}"
+          echo "Released:  ${{ steps.psr.outputs.released }}"
+
+  publish_pypi:
+    needs: version_bump
+    if: needs.version_bump.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: ⚙️ Set up repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version_bump.outputs.tag }}
+
+      - name: ⚙️ Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 📦 Install uv
+        run: python -m pip install uv
+
+      - name: 📦 Build distributions
+        run: uv build
+
+      - name: 🚀 Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  update_homebrew:
+    needs: [version_bump, publish_pypi]
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⏳ Wait for PyPI CDN propagation
+        run: sleep 30
+
+      - name: 🔍 Fetch SHA256 from PyPI
+        id: pypi
+        run: |
+          VERSION="${{ needs.version_bump.outputs.version }}"
+          JSON=$(curl -fsSL "https://pypi.org/pypi/lasagnastack/${VERSION}/json")
+          SHA256=$(echo "$JSON" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          sdist = next(u for u in data['urls'] if u['packagetype'] == 'sdist')
+          print(sdist['digests']['sha256'])
+          ")
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
+
+      - name: ⚙️ Check out tap repo
+        uses: actions/checkout@v4
+        with:
+          repository: jyjulianwong/homebrew-lasagnastack
+          token: ${{ secrets.TAP_GITHUB_TOKEN }}
+          path: tap
+
+      - name: ✏️ Update formula version and hash
+        run: |
+          VERSION="${{ steps.pypi.outputs.version }}"
+          SHA256="${{ steps.pypi.outputs.sha256 }}"
+          sed -i "s|lasagnastack-.*\.tar\.gz\"|lasagnastack-${VERSION}.tar.gz\"|" tap/Formula/lasagnastack.rb
+          sed -i "s|sha256 \"[a-f0-9]*\"|sha256 \"${SHA256}\"|" tap/Formula/lasagnastack.rb
+
+      - name: 🚀 Commit and push
+        run: |
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/lasagnastack.rb
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: bump lasagnastack to ${{ steps.pypi.outputs.version }}"
+          git push

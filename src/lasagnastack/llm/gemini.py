@@ -25,15 +25,16 @@ _FILE_POLL_INTERVAL_SEC = 3
 # Truncate logged prompt text to keep MLflow traces a reasonable size.
 _MAX_PROMPT_LOG_CHARS = 10000
 
-# USD cost per 1 million tokens: {model_prefix: (input_cost, output_cost)}.
+# USD cost per 1 million tokens: {model_prefix: (input_cost, output_cost, thinking_cost)}.
 # Matched by longest prefix so more-specific entries take priority.
 # Text, image, and video input tokens are all billed at the same per-token rate.
+# Thinking tokens are billed separately at their own rate (0.0 for models without thinking).
 # Rates reflect the Standard paid tier as of May 2026 (ai.google.dev/gemini-api/docs/pricing).
-_GEMINI_PRICING: dict[str, tuple[float, float]] = {
-    "gemini-2.5-pro": (1.25, 10.00),
-    "gemini-2.5-flash-lite": (0.10, 0.40),
-    "gemini-2.5-flash": (0.30, 2.50),
-    "gemini-2.0-flash": (0.10, 0.40),  # deprecated; shuts down 2026-06-01
+_GEMINI_PRICING: dict[str, tuple[float, float, float]] = {
+    "gemini-2.5-pro": (1.25, 10.00, 10.00),
+    "gemini-2.5-flash-lite": (0.10, 0.40, 0.40),
+    "gemini-2.5-flash": (0.30, 2.50, 2.50),
+    "gemini-2.0-flash": (0.10, 0.40, 0.0),  # deprecated; shuts down 2026-06-01
 }
 
 
@@ -50,8 +51,8 @@ def _prompt_hash(text: str) -> str:
 
 
 def _compute_cost(
-    model: str, input_tokens: int, output_tokens: int
-) -> tuple[float, float, float]:
+    model: str, input_tokens: int, output_tokens: int, thinking_tokens: int = 0
+) -> tuple[float, float, float, float]:
     """Estimate the USD cost of a Gemini API call from its token counts.
 
     Matches the model name against the longest known prefix in
@@ -62,18 +63,28 @@ def _compute_cost(
         model: Gemini model name, e.g. ``"gemini-2.5-flash"``.
         input_tokens: Number of prompt tokens consumed.
         output_tokens: Number of completion tokens generated.
+        thinking_tokens: Number of thinking (reasoning) tokens generated.
 
     Returns:
-        A ``(input_cost, output_cost, total_cost)`` tuple in USD, or
-        ``(0.0, 0.0, 0.0)`` if the model is not in the pricing table.
+        A ``(input_cost, output_cost, thinking_cost, total_cost)`` tuple in
+        USD, or ``(0.0, 0.0, 0.0, 0.0)`` if the model is not in the pricing
+        table.
     """
     for prefix in sorted(_GEMINI_PRICING, key=len, reverse=True):
         if model.startswith(prefix):
-            input_cost_per_1m, output_cost_per_1m = _GEMINI_PRICING[prefix]
+            input_cost_per_1m, output_cost_per_1m, thinking_cost_per_1m = (
+                _GEMINI_PRICING[prefix]
+            )
             input_cost = input_tokens * input_cost_per_1m / 1_000_000
             output_cost = output_tokens * output_cost_per_1m / 1_000_000
-            return input_cost, output_cost, input_cost + output_cost
-    return 0.0, 0.0, 0.0
+            thinking_cost = thinking_tokens * thinking_cost_per_1m / 1_000_000
+            return (
+                input_cost,
+                output_cost,
+                thinking_cost,
+                input_cost + output_cost + thinking_cost,
+            )
+    return 0.0, 0.0, 0.0, 0.0
 
 
 class GeminiClient(LLMClient):
@@ -87,30 +98,33 @@ class GeminiClient(LLMClient):
         self,
         api_key: str | None = None,
         model: str | None = None,
+        thinking_budget: int = 4000,
     ) -> None:
         """Initialise the Gemini client.
 
         Args:
             api_key: Gemini Developer API key. Falls back to the
-                ``GEMINI_API_KEY`` environment variable.
+                ``LSNSTK_LLM_GEMINI_API_KEY`` environment variable.
             model: Model name to use for all calls (LiteLLM naming convention).
-                Falls back to the ``LASAGNASTACK_LLM_MODEL`` environment
+                Falls back to the ``LSNSTK_LLM_MODEL`` environment
                 variable, then ``"gemini/gemini-2.5-flash"``.
+            thinking_budget: Maximum number of thinking tokens the model may
+                use per call. Set to ``0`` to disable thinking entirely.
         """
-        raw_model = model or os.getenv(
-            "LASAGNASTACK_LLM_MODEL", "gemini/gemini-2.5-flash"
-        )
+        raw_model = model or os.getenv("LSNSTK_LLM_MODEL", "gemini/gemini-2.5-flash")
         self._model = raw_model.removeprefix("gemini/")
-        resolved_key = api_key or os.getenv("GEMINI_API_KEY")
+        resolved_key = api_key or os.getenv("LSNSTK_LLM_GEMINI_API_KEY")
         if not resolved_key:
             raise ValueError(
-                "Gemini API key not found. Set GEMINI_API_KEY in .env or pass api_key=."
+                "Gemini API key not found. Set LSNSTK_LLM_GEMINI_API_KEY in .env or pass api_key=."
             )
         self._client = genai.Client(api_key=resolved_key)
+        self._thinking_budget = thinking_budget
 
         # Per-instance accumulators — updated after every successful API call.
         self._total_input_tokens: int = 0
         self._total_output_tokens: int = 0
+        self._total_thinking_tokens: int = 0
         self._total_cost_usd: float = 0.0
         self._call_count: int = 0
         self._stats_lock = threading.Lock()
@@ -128,6 +142,7 @@ class GeminiClient(LLMClient):
         return {
             "total_input_tokens": self._total_input_tokens,
             "total_output_tokens": self._total_output_tokens,
+            "total_thinking_tokens": self._total_thinking_tokens,
             "total_cost_usd": self._total_cost_usd,
             "llm_call_count": self._call_count,
         }
@@ -278,6 +293,9 @@ class GeminiClient(LLMClient):
                     temperature=temperature,
                     response_mime_type="application/json",
                     response_schema=response_schema,
+                    thinking_config=types.ThinkingConfig(
+                        thinking_budget=self._thinking_budget
+                    ),
                 ),
             )
 
@@ -285,8 +303,10 @@ class GeminiClient(LLMClient):
             latency_sec = round(time.perf_counter() - t0, 2)
             input_tokens = getattr(usage, "prompt_token_count", 0) or 0
             output_tokens = getattr(usage, "candidates_token_count", 0) or 0
-            input_cost, output_cost, total_cost = _compute_cost(
-                self._model, input_tokens, output_tokens
+            thinking_tokens = getattr(usage, "thoughts_token_count", 0) or 0
+            total_tokens = input_tokens + output_tokens + thinking_tokens
+            input_cost, output_cost, thinking_cost, total_cost = _compute_cost(
+                self._model, input_tokens, output_tokens, thinking_tokens
             )
 
             span.set_outputs({"response": response.text})
@@ -296,13 +316,22 @@ class GeminiClient(LLMClient):
                     SpanAttributeKey.CHAT_USAGE: {
                         TokenUsageKey.INPUT_TOKENS: input_tokens,
                         TokenUsageKey.OUTPUT_TOKENS: output_tokens,
-                        TokenUsageKey.TOTAL_TOKENS: input_tokens + output_tokens,
+                        TokenUsageKey.TOTAL_TOKENS: total_tokens,
                     },
                     SpanAttributeKey.LLM_COST: {
                         CostKey.INPUT_COST: input_cost,
                         CostKey.OUTPUT_COST: output_cost,
                         CostKey.TOTAL_COST: total_cost,
                     },
+                    # NOTE: These are custom fields that will show up in the "Attributes" tab in the MLflow UI.
+                    "input_tokens": input_tokens,
+                    "input_cost_usd": input_cost,
+                    "output_tokens": output_tokens,
+                    "output_cost_usd": output_cost,
+                    "thinking_tokens": thinking_tokens,
+                    "thinking_cost_usd": thinking_cost,
+                    "total_tokens": total_tokens,
+                    "total_cost_usd": total_cost,
                     "latency_sec": latency_sec,
                     "prompt_hash": ph,
                 }
@@ -311,6 +340,7 @@ class GeminiClient(LLMClient):
         with self._stats_lock:
             self._total_input_tokens += input_tokens
             self._total_output_tokens += output_tokens
+            self._total_thinking_tokens += thinking_tokens
             self._total_cost_usd += total_cost
             self._call_count += 1
 
@@ -321,6 +351,7 @@ class GeminiClient(LLMClient):
             latency_sec=latency_sec,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            thinking_tokens=thinking_tokens,
             cost_usd=round(total_cost, 6),
         )
         return response.text, usage

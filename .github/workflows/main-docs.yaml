@@ -37,8 +37,8 @@ jobs:
           uv sync --all-groups
           uv run pdoc -o docs/ src/lasagnastack/
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          LASAGNASTACK_LLM_MODEL: ${{ vars.LASAGNASTACK_LLM_MODEL }}
+          LSNSTK_LLM_MODEL: ${{ vars.LSNSTK_LLM_MODEL }}
+          LSNSTK_LLM_GEMINI_API_KEY: ${{ secrets.LSNSTK_LLM_GEMINI_API_KEY }}
           MLFLOW_TRACKING_URI: ${{ vars.MLFLOW_TRACKING_URI }}
           MLFLOW_EXPERIMENT_NAME: ${{ vars.MLFLOW_EXPERIMENT_NAME }}
 

@@ -26,12 +26,17 @@ dependencies = [
     "tenacity>=9.0.0",
 ]
 
+[project.scripts]
+lasagnastack = "lasagnastack.cli:main"
+
 [dependency-groups]
 dev = [
     "pre-commit>=4.2.0",
     "pyrefly>=0.26.0",
     "pytest>=7.2.0",
+    "python-semantic-release>=10.5.3",
     "ruff>=0.11.1",
+    "twine>=6.2.0",
     "uv-sort==0.6.0",
 ]
 docs = [
@@ -100,3 +105,6 @@ ignore-missing-source = false
 bad-assignment = false
 # Disable `bad-return` errors
 bad-return = false
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]

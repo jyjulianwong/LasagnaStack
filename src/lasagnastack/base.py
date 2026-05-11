@@ -11,7 +11,9 @@ import mlflow.entities
 import structlog
 
 from lasagnastack.models.cut_list import CutList
+from lasagnastack.models.enhance import ReelStyle
 from lasagnastack.models.inventory import ClipInventory, NormalisedClip
+from lasagnastack.models.post_caption import PostCaption
 
 log = structlog.get_logger()
 
@@ -23,11 +25,14 @@ class PipelineState:
     input_dir: Path
     output_dir: Path
     brief_path: Path
+    skill_path: Path | None = None
     critique_max_retries: int = 2
     normalised_clips: list[NormalisedClip] | None = None
     inventories: list[ClipInventory] | None = None
     cut_list: CutList | None = None
+    reel_style: ReelStyle | None = None
     draft_path: Path | None = None
+    post_caption: PostCaption | None = None
 
 
 @contextmanager
@@ -134,18 +139,6 @@ class Pipeline(ABC):
             "critique_max_retries": str(state.critique_max_retries),
         }
 
-    def _log_mlflow_session_metrics(self, state: PipelineState) -> None:
-        """Log session-level metrics to the active MLflow run.
-
-        Called while the MLflow run is still active, immediately after all
-        stages complete. No-op by default. Override to log token counts,
-        cost totals, or other session-level values.
-
-        Args:
-            state: Final pipeline state after all stages have run.
-        """
-        pass
-
     def _run_stage(self, stage: Stage, state: PipelineState) -> PipelineState:
         """Invoke a single stage wrapped in an MLflow CHAIN span.
 
@@ -176,10 +169,6 @@ class Pipeline(ABC):
         CHAIN span. Falls back to uninstrumented execution when MLflow is
         unreachable or unconfigured.
 
-        After all stages complete (and while the run is still active),
-        ``_log_mlflow_session_metrics`` is called so subclasses can log
-        token counts, costs, or other session-level metrics.
-
         Args:
             state: Initial pipeline state.
             auto_confirm: When ``True``, skip the interactive confirmation
@@ -203,9 +192,6 @@ class Pipeline(ABC):
                 state = self._run_stage(stage, state)
                 if i < len(self.stages) - 1:
                     _confirm(stage.completion_message(state), auto_confirm)
-
-            if mlflow.active_run():
-                self._log_mlflow_session_metrics(state)
 
         return state
 

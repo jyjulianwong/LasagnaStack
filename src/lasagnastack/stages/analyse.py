@@ -108,7 +108,7 @@ def _analyse_clip(
 def _load_prompt(source_file: str, duration_sec: float) -> str:
     template = (
         importlib.resources.files("lasagnastack.prompts")
-        .joinpath("analyse.txt")
+        .joinpath("analyse.md")
         .read_text(encoding="utf-8")
     )
     return template.format(source_file=source_file, duration_sec=duration_sec)

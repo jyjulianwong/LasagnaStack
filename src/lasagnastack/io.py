@@ -45,11 +45,26 @@ def critique_path(output_dir: Path, iteration: int) -> Path:
     return output_dir / "critique" / f"iteration_{iteration}.json"
 
 
+def reel_style_path(output_dir: Path) -> Path:
+    return output_dir / "reel_style.json"
+
+
 def draft_dir(output_dir: Path) -> Path:
     return output_dir / "draft"
 
 
+def post_caption_path(output_dir: Path) -> Path:
+    return output_dir / "post_caption.txt"
+
+
 # ── read / write helpers ──────────────────────────────────────────────────────
+
+
+def write_post_caption(output_dir: Path, caption: str) -> None:
+    """Write the Instagram post caption as a plain-text file."""
+    path = post_caption_path(output_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(caption, encoding="utf-8")
 
 
 def write_json(data: BaseModel | list, path: Path) -> None:

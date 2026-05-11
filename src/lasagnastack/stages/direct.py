@@ -20,6 +20,7 @@ def run(
     brief_path: Path,
     output_dir: Path,
     client: LLMClient | None = None,
+    skill_path: Path | None = None,
 ) -> CutList:
     """Generate an ordered cut list from all segment inventories and the brief.
 
@@ -30,6 +31,8 @@ def run(
         brief_path: Path to the freeform .txt creator brief.
         output_dir: Pipeline root; cut_list.json written here.
         client: LLM client to use. Defaults to GeminiClient.
+        skill_path: Optional path to a Markdown skill file injected into the
+            prompt before the creator brief.
 
     Returns:
         A CutList ready for critique or rendering.
@@ -37,7 +40,7 @@ def run(
     if client is None:
         client = GeminiClient()
 
-    prompt = _build_prompt(inventories, brief_path)
+    prompt = _build_prompt(inventories, brief_path, skill_path)
     total_segments = sum(len(inv.segments) for inv in inventories)
     log.info("direct_start", clips=len(inventories), segments=total_segments)
 
@@ -48,14 +51,20 @@ def run(
     return cut_list
 
 
-def _build_prompt(inventories: list[ClipInventory], brief_path: Path) -> str:
+def _build_prompt(
+    inventories: list[ClipInventory],
+    brief_path: Path,
+    skill_path: Path | None = None,
+) -> str:
     template = (
         importlib.resources.files("lasagnastack.prompts")
-        .joinpath("direct.txt")
+        .joinpath("direct.md")
         .read_text(encoding="utf-8")
     )
     inventories_json = json.dumps([inv.model_dump() for inv in inventories], indent=2)
+    skill_text = skill_path.read_text(encoding="utf-8").strip() if skill_path else ""
     return template.format(
+        skill_text=skill_text,
         brief_text=brief_path.read_text(encoding="utf-8").strip(),
         inventories_json=inventories_json,
     )
@@ -68,7 +77,11 @@ class DirectStage(Stage):
     def run(self, state: PipelineState) -> PipelineState:
         assert state.inventories is not None
         cut_list = run(
-            state.inventories, state.brief_path, state.output_dir, self._client
+            state.inventories,
+            state.brief_path,
+            state.output_dir,
+            self._client,
+            state.skill_path,
         )
         return dataclasses.replace(state, cut_list=cut_list)
 
