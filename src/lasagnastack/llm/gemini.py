@@ -104,21 +104,19 @@ class GeminiClient(LLMClient):
 
         Args:
             api_key: Gemini Developer API key. Falls back to the
-                ``GEMINI_API_KEY`` environment variable.
+                ``LSNSTK_LLM_GEMINI_API_KEY`` environment variable.
             model: Model name to use for all calls (LiteLLM naming convention).
-                Falls back to the ``LASAGNASTACK_LLM_MODEL`` environment
+                Falls back to the ``LSNSTK_LLM_MODEL`` environment
                 variable, then ``"gemini/gemini-2.5-flash"``.
             thinking_budget: Maximum number of thinking tokens the model may
                 use per call. Set to ``0`` to disable thinking entirely.
         """
-        raw_model = model or os.getenv(
-            "LASAGNASTACK_LLM_MODEL", "gemini/gemini-2.5-flash"
-        )
+        raw_model = model or os.getenv("LSNSTK_LLM_MODEL", "gemini/gemini-2.5-flash")
         self._model = raw_model.removeprefix("gemini/")
-        resolved_key = api_key or os.getenv("GEMINI_API_KEY")
+        resolved_key = api_key or os.getenv("LSNSTK_LLM_GEMINI_API_KEY")
         if not resolved_key:
             raise ValueError(
-                "Gemini API key not found. Set GEMINI_API_KEY in .env or pass api_key=."
+                "Gemini API key not found. Set LSNSTK_LLM_GEMINI_API_KEY in .env or pass api_key=."
             )
         self._client = genai.Client(api_key=resolved_key)
         self._thinking_budget = thinking_budget

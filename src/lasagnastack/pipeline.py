@@ -115,7 +115,7 @@ class ReelPipeline(Pipeline):
         """
         return {
             **super()._mlflow_tags(state),
-            "model": os.getenv("LASAGNASTACK_LLM_MODEL", "gemini/gemini-2.5-flash"),
+            "model": os.getenv("LSNSTK_LLM_MODEL", "gemini/gemini-2.5-flash"),
         }
 
 

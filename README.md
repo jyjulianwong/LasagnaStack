@@ -58,7 +58,7 @@ cp .env.sample .env
 Get a Gemini API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) and add it to your `.env`:
 
 ```
-GEMINI_API_KEY=your-key-here
+LSNSTK_LLM_GEMINI_API_KEY=your-key-here
 ```
 
 ## Run the pipeline
@@ -141,8 +141,8 @@ Runs are named `lasagnastack-{brief_stem}-{4-char-id}` and tagged with the model
 
 | Parameter | How to set | Default |
 |---|---|---|
-| Gemini API key | `GEMINI_API_KEY` env. var. (required) | — |
-| LLM model | `LASAGNASTACK_LLM_MODEL` env. var. | `gemini/gemini-2.5-flash` |
+| LLM model | `LSNSTK_LLM_MODEL` env. var. | `gemini/gemini-2.5-flash` |
+| Gemini API key | `LSNSTK_LLM_GEMINI_API_KEY` env. var. (required) | — |
 | Path to skill file | `--skill` CLI flag | — |
 | `critique` stage maximum # of retries | `--critique-max-retries` CLI flag | `2` |
 | `ingest` stage maximum # of worker processes | `--ingest-max-workers` CLI flag | `2` |
