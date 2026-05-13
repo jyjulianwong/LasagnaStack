@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.0.1 (2026-05-13)
+
+### Bug Fixes
+
+- Added clearer user instructions and support for more LLMs
+  ([#3](https://github.com/jyjulianwong/LasagnaStack/pull/3),
+  [`e882b56`](https://github.com/jyjulianwong/LasagnaStack/commit/e882b56936a3af9e13d2e8be613f3c18f49e883d))
+
+
 ## v1.0.0 (2026-05-11)
 
 ### Bug Fixes
