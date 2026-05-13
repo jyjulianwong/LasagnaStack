@@ -15,7 +15,7 @@ where...
 `./my_clips/`: a folder of raw video clips in MP4/MOV format + one `.txt` creator brief.  
 `./my_capcut_draft/`: a CapCut draft folder, ready to open in CapCut Desktop.
 
-The pipeline runs in six sequential stages: **ingest** (uses ffmpeg) → **analyse** (uses LLM) → **direct** (uses LLM) → **critique loop** (uses LLM) → **enhance** (uses LLM) → **render** (uses pyCapCut).
+The pipeline runs in seven sequential stages: **ingest** (uses ffmpeg) → **analyse** (uses LLM) → **direct** (uses LLM) → **critique loop** (uses LLM) → **enhance** (uses LLM) → **render** (uses pyCapCut) → **post caption** (uses LLM).
 
 Each stage is a subclass of the `Stage` abstract base class (`base.py`). Adding, removing, or reordering stages requires only editing the `stages` list in `ReelPipeline`. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the full architecture guide.
 
@@ -70,11 +70,22 @@ cp .env.sample .env
 
 ## Authentication
 
-Get a Gemini API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) and add it to your `.env`:
+The required API key depends on the value of `LSNSTK_LLM_MODEL`:
+
+**Gemini** (default — `gemini/gemini-2.5-flash`): get a key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) and add it to your `.env`:
 
 ```
 LSNSTK_LLM_GEMINI_API_KEY=your-key-here
 ```
+
+**OpenRouter** (e.g. `openrouter/deepseek/deepseek-v3.2`): get a key at [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys) and add it to your `.env`:
+
+```
+LSNSTK_LLM_MODEL=openrouter/deepseek/deepseek-v3.2
+LSNSTK_LLM_OPENROUTER_API_KEY=your-key-here
+```
+
+> **Note:** Stage 2 (analyse) uploads video to the Gemini Files API and always requires `LSNSTK_LLM_GEMINI_API_KEY`, even when the other stages use an OpenRouter model.
 
 ## Run the pipeline
 
@@ -127,7 +138,7 @@ If CapCut is not installed, the draft is written to `<output_dir>/draft/LasagnaS
 
 ## Track LLM costs with MLflow
 
-Every pipeline run is automatically traced with [MLflow](https://mlflow.org). Each Gemini API call is recorded as a span (prompt, response, token counts, latency, and estimated USD cost). Session-level totals are written to the run when the pipeline finishes.
+Every pipeline run is automatically traced with [MLflow](https://mlflow.org). Each LLM API call is recorded as a span (prompt, response, token counts, and latency; Gemini also reports estimated USD cost). Session-level totals are written to the run when the pipeline finishes.
 
 **1. Start the MLflow server** (in a separate terminal, before running the pipeline):
 
@@ -144,9 +155,9 @@ MLFLOW_TRACKING_URI=http://localhost:5001
 MLFLOW_EXPERIMENT_NAME=lasagnastack
 ```
 
-**3. Run the pipeline as normal.** Open `http://localhost:5000` in your browser to watch live.
+**3. Run the pipeline as normal.** Open `http://localhost:5001` in your browser to watch live.
 
-In **Experiments -> lasagnastack -> Traces**, spans appear in real time as stages progress. Each trace has three levels: the top-level pipeline span (`ReelPipeline.run`), a per-stage span (e.g. `AnalyseStage.run`), and individual LLM call spans (`GeminiClient._call_api`) nested inside.
+In **Experiments -> lasagnastack -> Traces**, spans appear in real time as stages progress. Each trace has three levels: the top-level pipeline span (`ReelPipeline.run`), a per-stage span (e.g. `AnalyseStage.run`), and individual LLM call spans (e.g. `GeminiClient._call_api` or `OpenRouterClient._call_api`) nested inside.
 
 Runs are named `lasagnastack-{brief_stem}-{4-char-id}` and tagged with the model, reel name, and `critique_max_retries`.
 
@@ -157,7 +168,8 @@ Runs are named `lasagnastack-{brief_stem}-{4-char-id}` and tagged with the model
 | Parameter | How to set | Default |
 |---|---|---|
 | LLM model | `LSNSTK_LLM_MODEL` env. var. | `gemini/gemini-2.5-flash` |
-| Gemini API key | `LSNSTK_LLM_GEMINI_API_KEY` env. var. (required) | — |
+| Gemini API key | `LSNSTK_LLM_GEMINI_API_KEY` env. var. (required for `gemini/` models and Stage 2) | — |
+| OpenRouter API key | `LSNSTK_LLM_OPENROUTER_API_KEY` env. var. (required for `openrouter/` models) | — |
 | Path to skill file | `--skill` CLI flag | — |
 | `critique` stage maximum # of retries | `--critique-max-retries` CLI flag | `2` |
 | `ingest` stage maximum # of worker processes | `--ingest-max-workers` CLI flag | `2` |
@@ -193,7 +205,7 @@ jupyter lab
 
 - The pipeline is modularlised into stages, with each stage being responsible for transforming the global state of the pipeline run (similar to LangGraph). It is easy to add, remove, or reorder stages.
 - The pipeline supports "skills" -- each user can write their own skill `.md` file to customise the pipeline to their own accounts' styles and branding, or use pre-written skills from marketplaces to cater for different types of reel content.
-- Chain-of-thought reasoning is enabled via Gemini.
+- Chain-of-thought reasoning is enabled via Gemini's thinking token budget (configurable per stage).
 - Human-in-the-loop is deeply integrated in the design, with each stage prompting the user for confirmation before proceeding to the next stage.
 - Prompt caching is enabled to avoid unnecessary LLM calls to reduce latency and cost.
 - The tool is deeply integrated with its host machine. It auto-detects CapCut Desktop, copies all source media (timeline clips and unused footage) so the project opens in CapCut with no missing-media errors, no manual steps, all your raw clips already in the import panel, and the timeline editor populated and ready to go.

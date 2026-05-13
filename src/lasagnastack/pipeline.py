@@ -6,6 +6,7 @@ import structlog
 
 from lasagnastack import io
 from lasagnastack.base import Pipeline, PipelineState, Stage
+from lasagnastack.llm import make_client
 from lasagnastack.llm.base import LLMClient
 from lasagnastack.llm.gemini import GeminiClient
 from lasagnastack.stages.analyse import AnalyseStage
@@ -160,11 +161,13 @@ def run_pipeline(
     state = ReelPipeline(
         ingest_max_workers=ingest_max_workers,
         analyse_max_workers=analyse_max_workers,
-        analyse_client=GeminiClient(thinking_budget=4000),
-        direct_client=GeminiClient(thinking_budget=12000),
-        critique_client=GeminiClient(thinking_budget=12000),
-        enhance_client=GeminiClient(thinking_budget=4000),
-        post_caption_client=GeminiClient(thinking_budget=4000),
+        analyse_client=GeminiClient(
+            model="gemini/gemini-2.5-flash", thinking_budget=4000
+        ),  # TODO: LLMClient: Not compatible with OpenRouter.
+        direct_client=make_client(thinking_budget=12000),
+        critique_client=make_client(thinking_budget=12000),
+        enhance_client=make_client(thinking_budget=4000),
+        post_caption_client=make_client(thinking_budget=4000),
     ).run(state, auto_confirm=auto_confirm)
 
     log.info("pipeline_complete", draft=str(state.draft_path))
