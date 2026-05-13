@@ -17,6 +17,10 @@ from lasagnastack.models.post_caption import PostCaption
 
 log = structlog.get_logger()
 
+_DEFAULT_MLFLOW_TRACKING_URI = (
+    f"sqlite:///{Path.home() / '.lasagnastack' / 'mlflow.db'}"
+)
+
 
 @dataclass
 class PipelineState:
@@ -57,6 +61,8 @@ def _mlflow_run(
         Nothing; used purely for its side effect of tracking the wrapped block.
     """
     try:
+        tracking_uri = os.getenv("MLFLOW_TRACKING_URI", _DEFAULT_MLFLOW_TRACKING_URI)
+        mlflow.set_tracking_uri(tracking_uri)
         experiment_name = os.getenv("MLFLOW_EXPERIMENT_NAME", "lasagnastack")
         mlflow.set_experiment(experiment_name)
         ctx = mlflow.start_run(run_name=run_name, tags=tags)
