@@ -20,6 +20,7 @@ log = structlog.get_logger()
 
 _MAX_JSON_RETRIES = 2
 _MAX_PROMPT_LOG_CHARS = 10000
+_REQUEST_TIMEOUT_SEC = 300.0
 
 _OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
@@ -84,7 +85,8 @@ class OpenRouterClient(LLMClient):
         self._client = OpenAI(
             api_key=resolved_key,
             base_url=_OPENROUTER_BASE_URL,
-            timeout=300.0,
+            timeout=_REQUEST_TIMEOUT_SEC,
+            max_retries=0,
         )
 
         self._total_input_tokens: int = 0
@@ -197,6 +199,7 @@ class OpenRouterClient(LLMClient):
                     {"role": "user", "content": prompt},
                 ],
                 temperature=temperature,
+                timeout=_REQUEST_TIMEOUT_SEC,
             )
 
             text = response.choices[0].message.content or ""
