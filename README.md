@@ -140,28 +140,29 @@ If CapCut is not installed, the draft is written to `<output_dir>/draft/LasagnaS
 
 Every pipeline run is automatically traced with [MLflow](https://mlflow.org). Each LLM API call is recorded as a span (prompt, response, token counts, and latency; Gemini also reports estimated USD cost). Session-level totals are written to the run when the pipeline finishes.
 
-**1. Start the MLflow server** (in a separate terminal, before running the pipeline):
+Tracking works out of the box with no setup — runs are written to `~/.lasagnastack/mlflow.db` automatically.
+
+**Browse past runs** (in a separate terminal):
 
 ```bash
-mlflow server --host 127.0.0.1 --port 5001
+mlflow server \
+  --backend-store-uri sqlite:///$HOME/.lasagnastack/mlflow.db \
+  --host 127.0.0.1 --port 5001
 ```
 
 > **macOS note:** port 5000 is reserved by AirPlay Receiver. Use 5001 or higher.
 
-**2. Add the tracking variables to `.env`:**
-
-```
-MLFLOW_TRACKING_URI=http://localhost:5001
-MLFLOW_EXPERIMENT_NAME=lasagnastack
-```
-
-**3. Run the pipeline as normal.** Open `http://localhost:5001` in your browser to watch live.
-
-In **Experiments -> lasagnastack -> Traces**, spans appear in real time as stages progress. Each trace has three levels: the top-level pipeline span (`ReelPipeline.run`), a per-stage span (e.g. `AnalyseStage.run`), and individual LLM call spans (e.g. `GeminiClient._call_api` or `OpenRouterClient._call_api`) nested inside.
+Open `http://localhost:5001` in your browser. In **Experiments -> lasagnastack -> Traces**, each run has three span levels: the top-level pipeline span (`ReelPipeline.run`), a per-stage span (e.g. `AnalyseStage.run`), and individual LLM call spans (e.g. `GeminiClient._call_api` or `OpenRouterClient._call_api`) nested inside.
 
 Runs are named `lasagnastack-{brief_stem}-{4-char-id}` and tagged with the model, reel name, and `critique_max_retries`.
 
-> **No server?** Set `MLFLOW_TRACKING_URI=mlruns` to write results to a local folder instead, then view them with `mlflow ui`.
+**To use a remote MLflow server instead**, set `MLFLOW_TRACKING_URI` in `.env`:
+
+```
+MLFLOW_TRACKING_URI=http://your-mlflow-server:5001
+```
+
+Note that runs already stored in `~/.lasagnastack/mlflow.db` will not appear on a remote server — the two stores are independent.
 
 ## Configuration
 
@@ -174,6 +175,8 @@ Runs are named `lasagnastack-{brief_stem}-{4-char-id}` and tagged with the model
 | `critique` stage maximum # of retries | `--critique-max-retries` CLI flag | `2` |
 | `ingest` stage maximum # of worker processes | `--ingest-max-workers` CLI flag | `2` |
 | `analyse` stage maximum # of concurrent LLM calls | `--analyse-max-workers` CLI flag | `4` |
+| MLflow tracking server | `MLFLOW_TRACKING_URI` env. var. | `sqlite:///$HOME/.lasagnastack/mlflow.db` |
+| MLflow experiment name | `MLFLOW_EXPERIMENT_NAME` env. var. | `lasagnastack` |
 
 ## Architecture
 
