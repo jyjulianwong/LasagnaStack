@@ -7,13 +7,17 @@ An AI pipeline that turns raw video clips into an editable CapCut project for sh
 It is as simple as:
 
 ```bash
-lasagnastack make ./my_clips/ --out ./my_capcut_draft/
+lasagnastack make ./my_clips/ --out ./my_output_folder/
 ```
 
 where...
 
-`./my_clips/`: a folder of raw video clips in MP4/MOV format + one `.txt` creator brief.  
-`./my_capcut_draft/`: a CapCut draft folder, ready to open in CapCut Desktop.
+`./my_clips/`: an existing folder of raw video clips in MP4/MOV format + one `.txt` creator brief.  
+`./my_output_folder/`: a folder created by the pipeline to store its output, including:
+- A copy of the AI-generated CapCut project folder that will already have been loaded into CapCut Desktop.
+- A `post_caption.txt` file that contains the AI-generated post caption for the reel.
+- Intermediate output files from each pipeline stage for debugging and logging.
+- Cached files from various pipeline stages for faster re-runs.
 
 The pipeline runs in seven sequential stages: **ingest** (uses ffmpeg) → **analyse** (uses LLM) → **direct** (uses LLM) → **critique loop** (uses LLM) → **enhance** (uses LLM) → **render** (uses pyCapCut) → **post caption** (uses LLM).
 
