@@ -14,16 +14,25 @@ where...
 
 `./my_clips/`: an existing folder of raw video clips in MP4/MOV format + one `.txt` creator brief.  
 `./my_output_folder/`: a folder created by the pipeline to store its output, including:
-- A copy of the AI-generated CapCut project folder that will already have been loaded into CapCut Desktop.
-- A `post_caption.txt` file that contains the AI-generated post caption for the reel.
-- Intermediate output files from each pipeline stage for debugging and logging.
-- Cached files from various pipeline stages for faster re-runs.
+  - A copy of the AI-generated CapCut project folder that will already have been loaded into CapCut Desktop.
+  - A `post_caption.txt` file that contains the AI-generated post caption for the reel.
+  - Intermediate output files from each pipeline stage for debugging and logging.
+  - Cached files from various pipeline stages for faster re-runs.
 
-The pipeline runs in seven sequential stages: **ingest** (uses ffmpeg) → **analyse** (uses LLM) → **direct** (uses LLM) → **critique loop** (uses LLM) → **enhance** (uses LLM) → **render** (uses pyCapCut) → **post caption** (uses LLM).
+The pipeline runs in seven sequential stages: 
+  - **ingest** (uses ffmpeg) → 
+  - **analyse** (uses LLM APIs) → 
+  - **direct** (uses LLM APIs) → 
+  - **critique loop** (uses LLM APIs) → 
+  - **enhance** (uses LLM APIs) → 
+  - **render** (uses pyCapCut) → 
+  - **post caption** (uses LLM APIs)
 
-Each stage is a subclass of the `Stage` abstract base class (`base.py`). Adding, removing, or reordering stages requires only editing the `stages` list in `ReelPipeline`. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the full architecture guide.
+---
 
-## Installation
+## For users...
+
+### Installation
 
 Install via Homebrew:
 
@@ -38,7 +47,78 @@ Install via PyPI:
 pip install lasagnastack
 ```
 
-## Get started with development
+### Authentication
+
+You will need to provide your own API keys for the LLM APIs you use. The required API key depends on the value of `LSNSTK_LLM_MODEL`.
+
+### Gemini (e.g. `gemini/gemini-2.5-flash`)
+
+Get a key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) and set it as an environment variable:
+
+```bash
+export LSNSTK_LLM_MODEL=gemini/gemini-2.5-flash
+export LSNSTK_LLM_GEMINI_API_KEY=your-key-here
+```
+
+### OpenRouter (e.g. `openrouter/deepseek/deepseek-v3.2`)
+
+Get a key at [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys) and set these environment variables:
+
+```bash
+export LSNSTK_LLM_MODEL=openrouter/deepseek/deepseek-v3.2
+export LSNSTK_LLM_OPENROUTER_API_KEY=your-key-here
+```
+
+> **NOTE:** Stage 2 (analyse) uploads video to the Gemini Files API and always requires `LSNSTK_LLM_GEMINI_API_KEY`, even when the other stages use an OpenRouter model.
+
+### How to add skills
+
+Skills are used to customise the pipeline to your own social media account's styles and branding, or use pre-written skills from marketplaces to cater for different types of reel content.
+
+A skill is a Markdown (`.md`) file that contains the prompt templates for the direct, critique, and enhance stages. The skill file is injected into the prompt templates for the direct, critique, and enhance stages.
+
+You can use your own skill file by passing the `--skill` CLI flag to the `make` command.
+
+### How to use the CLI
+
+```
+usage: lasagnastack make [-h] --out OUTPUT_DIR [--skill SKILL_FILE] [--yes]
+                         [--critique-max-retries N] [--ingest-max-workers N]
+                         [--analyse-max-workers N] INPUT_DIR
+
+positional arguments:
+  INPUT_DIR                     Folder containing clips and brief .txt
+
+options:
+  --out OUTPUT_DIR              Destination for the CapCut draft and working files
+  --skill SKILL_FILE            Path to Markdown skill file injected into the direct, 
+                                critique, and enhance prompt templates (optional)
+  --yes, -y                     Auto-confirm all stage prompts
+  --critique-max-retries N      Maximum # of critique loop retries (default: 2)
+  --ingest-max-workers N        Maximum # of parallel worker processes for `ingest` stage (default: 2)
+  --analyse-max-workers N       Maximum # of concurrent LLM calls for `analyse` stage (default: 4)
+```
+
+### Opening the draft in CapCut Desktop (macOS)
+
+If CapCut Desktop is installed, the pipeline automatically:
+
+1. Detects `~/Movies/CapCut/User Data/`
+2. Copies **all** `.mp4`/`.mov` files from your input folder into the CapCut draft folder — including clips not used on the timeline — so they are immediately available in CapCut's import panel
+3. Rewrites the timeline clip paths in `draft_info.json` to point to the copied files
+4. Registers the draft in `root_meta_info.json` so it appears on the CapCut home screen straight away
+
+Open CapCut Desktop after the pipeline finishes — the draft will appear on the home screen under your local projects with all media already linked. Drafts are named **LasagnaStack - Reel Name** and use that same string as the folder name so they are easy to identify among existing projects.
+
+If CapCut is not installed, the draft is written to `<output_dir>/draft/LasagnaStack - {reel_name}/` and you can copy it manually.
+
+> This has been tested with CapCut Desktop 8.5.0 on macOS Sequoia 15.6.1. There may be issues with older versions or other operating systems.
+
+---
+
+## For developers...
+
+### Get started with development
 
 1. Clone the repository.
 
@@ -62,9 +142,9 @@ uv sync --all-groups
 uv run pre-commit install
 ```
 
-## Set up environment
+### Set up environment
 
-Copy `.env.sample` to `.env` and fill in your values:
+Copy `.env.sample` to `.env` and fill in your values (see [Authentication](#authentication) above for the available variables):
 
 ```bash
 cp .env.sample .env
@@ -72,26 +152,7 @@ cp .env.sample .env
 
 `.env` is gitignored. Values set in the shell environment take precedence over `.env`.
 
-## Authentication
-
-The required API key depends on the value of `LSNSTK_LLM_MODEL`:
-
-**Gemini** (default — `gemini/gemini-2.5-flash`): get a key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) and add it to your `.env`:
-
-```
-LSNSTK_LLM_GEMINI_API_KEY=your-key-here
-```
-
-**OpenRouter** (e.g. `openrouter/deepseek/deepseek-v3.2`): get a key at [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys) and add it to your `.env`:
-
-```
-LSNSTK_LLM_MODEL=openrouter/deepseek/deepseek-v3.2
-LSNSTK_LLM_OPENROUTER_API_KEY=your-key-here
-```
-
-> **Note:** Stage 2 (analyse) uploads video to the Gemini Files API and always requires `LSNSTK_LLM_GEMINI_API_KEY`, even when the other stages use an OpenRouter model.
-
-## Run the pipeline
+### Run the pipeline
 
 Prepare an input folder containing your MP4/MOV clips and exactly one `.txt` brief file, then run:
 
@@ -105,70 +166,7 @@ The pipeline pauses for confirmation between each stage. To skip all prompts:
 uv run python -m lasagnastack make ./my_clips/ --out ./drafts/reel_2025_05_05 --yes
 ```
 
-Full CLI reference:
-
-```
-usage: lasagnastack make [-h] --out OUTPUT_DIR [--skill SKILL_FILE] [--yes]
-                         [--critique-max-retries N] [--ingest-max-workers N]
-                         [--analyse-max-workers N] INPUT_DIR
-
-positional arguments:
-  INPUT_DIR                     Folder containing clips and brief .txt
-
-options:
-  --out OUTPUT_DIR              Destination for the CapCut draft and working files
-  --skill SKILL_FILE            Path to Markdown skill file injected into the direct, 
-                                critique, and enhance prompt templates (optional)
-  --yes, -y                     Auto-confirm all stage prompts
-  --critique-max-retries N      Maximum # of critique loop retries (default: 2)
-  --ingest-max-workers N        Maximum # of parallel worker processes for `ingest` stage (default: 2)
-  --analyse-max-workers N       Maximum # of concurrent LLM calls for `analyse` stage (default: 4)
-```
-
-## Open the draft in CapCut Desktop (macOS)
-
-If CapCut Desktop is installed, the pipeline automatically:
-
-1. Detects `~/Movies/CapCut/User Data/`
-2. Copies **all** `.mp4`/`.mov` files from your input folder into the CapCut draft folder — including clips not used on the timeline — so they are immediately available in CapCut's import panel
-3. Rewrites the timeline clip paths in `draft_info.json` to point to the copied files
-4. Registers the draft in `root_meta_info.json` so it appears on the CapCut home screen straight away
-
-Open CapCut Desktop after the pipeline finishes — the draft will appear on the home screen under your local projects with all media already linked. Drafts are named **LasagnaStack - Reel Name** and use that same string as the folder name so they are easy to identify among existing projects.
-
-If CapCut is not installed, the draft is written to `<output_dir>/draft/LasagnaStack - {reel_name}/` and you can copy it manually.
-
-> This has been tested with CapCut Desktop 8.5.0 on macOS Sequoia 15.6.1. There may be issues with older versions or other operating systems.
-
-## Track LLM costs with MLflow
-
-Every pipeline run is automatically traced with [MLflow](https://mlflow.org). Each LLM API call is recorded as a span (prompt, response, token counts, and latency; Gemini also reports estimated USD cost). Session-level totals are written to the run when the pipeline finishes.
-
-Tracking works out of the box with no setup — runs are written to `~/.lasagnastack/mlflow.db` automatically.
-
-**Browse past runs** (in a separate terminal):
-
-```bash
-mlflow server \
-  --backend-store-uri sqlite:///$HOME/.lasagnastack/mlflow.db \
-  --host 127.0.0.1 --port 5001
-```
-
-> **macOS note:** port 5000 is reserved by AirPlay Receiver. Use 5001 or higher.
-
-Open `http://localhost:5001` in your browser. In **Experiments -> lasagnastack -> Traces**, each run has three span levels: the top-level pipeline span (`ReelPipeline.run`), a per-stage span (e.g. `AnalyseStage.run`), and individual LLM call spans (e.g. `GeminiClient._call_api` or `OpenRouterClient._call_api`) nested inside.
-
-Runs are named `lasagnastack-{brief_stem}-{4-char-id}` and tagged with the model, reel name, and `critique_max_retries`.
-
-**To use a remote MLflow server instead**, set `MLFLOW_TRACKING_URI` in `.env`:
-
-```
-MLFLOW_TRACKING_URI=http://your-mlflow-server:5001
-```
-
-Note that runs already stored in `~/.lasagnastack/mlflow.db` will not appear on a remote server — the two stores are independent.
-
-## Configuration
+### Configuration
 
 | Parameter | How to set | Default |
 |---|---|---|
@@ -182,11 +180,11 @@ Note that runs already stored in `~/.lasagnastack/mlflow.db` will not appear on 
 | MLflow tracking server | `MLFLOW_TRACKING_URI` env. var. | `sqlite:///$HOME/.lasagnastack/mlflow.db` |
 | MLflow experiment name | `MLFLOW_EXPERIMENT_NAME` env. var. | `lasagnastack` |
 
-## Architecture
+### Architecture
 
-See [`ARCHITECTURE.md`](ARCHITECTURE.md) for four annotated diagrams covering the pipeline data flow, the Stage 4 critique loop, the Stage 6 render + CapCut export, and the extensibility model.
+Each stage is a subclass of the `Stage` abstract base class (`base.py`). Adding, removing, or reordering stages requires only editing the `stages` list in `ReelPipeline`. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for four annotated diagrams covering the pipeline data flow, the Stage 4 critique loop, the Stage 6 render + CapCut export, and the extensibility model.
 
-## Get started with Jupyter notebooks
+### Get started with Jupyter notebooks
 
 1. Once the above setup is complete, set up a Python kernel.
 
@@ -207,6 +205,36 @@ jupyter kernelspec uninstall lasagnastack
 ```bash
 jupyter lab
 ```
+
+### Track LLM costs with MLflow
+
+Every pipeline run is automatically traced with [MLflow](https://mlflow.org). Each LLM API call is recorded as a span (prompt, response, token counts, and latency; Gemini also reports estimated USD cost). Session-level totals are written to the run when the pipeline finishes.
+
+Tracking works out of the box with no setup — runs are written to `~/.lasagnastack/mlflow.db` automatically.
+
+**To browse past runs**, start the MLflow server in a separate terminal:
+
+```bash
+mlflow server \
+  --backend-store-uri sqlite:///$HOME/.lasagnastack/mlflow.db \
+  --host 127.0.0.1 --port 5001
+```
+
+> **macOS note:** port 5000 is reserved by AirPlay Receiver. Use 5001 or higher.
+
+Open `http://localhost:5001` in your browser. In **Experiments -> lasagnastack -> Traces**, each run has three span levels: the top-level pipeline span (`ReelPipeline.run`), a per-stage span (e.g. `AnalyseStage.run`), and individual LLM call spans (e.g. `GeminiClient._call_api` or `OpenRouterClient._call_api`) nested inside.
+
+Runs are named `lasagnastack-{brief_stem}-{4-char-id}` and tagged with the model, reel name, and `critique_max_retries`.
+
+**To use a remote MLflow server instead**, set `MLFLOW_TRACKING_URI` as an environment variable:
+
+```
+MLFLOW_TRACKING_URI=http://your-mlflow-server:5001
+```
+
+Note that runs already stored in `~/.lasagnastack/mlflow.db` will not appear on a remote server — the two stores are independent.
+
+---
 
 ## This repo is cool because...
 
