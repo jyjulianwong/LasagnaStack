@@ -26,6 +26,14 @@ _OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 
 def _prompt_hash(text: str) -> str:
+    """Return a short SHA-256 hex digest of text for log correlation.
+
+    Args:
+        text: The string to hash.
+
+    Returns:
+        A 12-character hexadecimal digest.
+    """
     return hashlib.sha256(text.encode()).hexdigest()[:12]
 
 
@@ -61,6 +69,9 @@ class OpenRouterClient(LLMClient):
         self,
         api_key: str | None = None,
         model: str | None = None,
+        reasoning_max_tokens: int = 4000,
+        reasoning_effort: str | None = None,
+        total_max_tokens: int | None = None,
     ) -> None:
         """Initialise the OpenRouter client.
 
@@ -71,7 +82,24 @@ class OpenRouterClient(LLMClient):
                 or bare ``"<provider>/<model>"``). Falls back to the
                 ``LSNSTK_LLM_MODEL`` environment variable, then
                 ``"openrouter/meta-llama/llama-3.1-8b-instruct"``.
+            reasoning_max_tokens: Token budget forwarded as
+                ``reasoning.max_tokens`` when no effort level is set. Set
+                to ``0`` to disable reasoning entirely.
+            reasoning_effort: Qualitative effort level (``"none"`` /
+                ``"minimal"`` / ``"low"`` / ``"medium"`` / ``"high"`` /
+                ``"xhigh"``). When set, takes priority over
+                ``reasoning_max_tokens`` and maps to ``reasoning.effort``
+                in the request.
+            total_max_tokens: Passed as ``max_tokens`` in the API request —
+                the ceiling on all output tokens combined (reasoning + visible
+                response). Required for Anthropic models where ``max_tokens``
+                must be strictly greater than the reasoning budget.
         """
+        super().__init__(
+            reasoning_max_tokens=reasoning_max_tokens,
+            reasoning_effort=reasoning_effort,
+            total_max_tokens=total_max_tokens,
+        )
         raw_model = model or os.getenv(
             "LSNSTK_LLM_MODEL", "openrouter/meta-llama/llama-3.1-8b-instruct"
         )
@@ -91,23 +119,25 @@ class OpenRouterClient(LLMClient):
 
         self._total_input_tokens: int = 0
         self._total_output_tokens: int = 0
+        self._total_thinking_tokens: int = 0
         self._total_cost_usd: float = 0.0
         self._call_count: int = 0
         self._stats_lock = threading.Lock()
 
     @property
     def session_stats(self) -> dict[str, float | int]:
-        """Aggregated token totals across all calls on this instance.
+        """Aggregated token and cost totals across all calls on this instance.
 
         Returns:
             A dict with keys ``total_input_tokens``, ``total_output_tokens``,
-            ``total_thinking_tokens`` (always 0), ``total_cost_usd`` (always
-            0.0 — OpenRouter bills externally), and ``llm_call_count``.
+            ``total_thinking_tokens``, ``total_cost_usd``, and
+            ``llm_call_count``. Cost is read directly from the ``usage.cost``
+            field returned by OpenRouter — no static pricing table is needed.
         """
         return {
             "total_input_tokens": self._total_input_tokens,
             "total_output_tokens": self._total_output_tokens,
-            "total_thinking_tokens": 0,
+            "total_thinking_tokens": self._total_thinking_tokens,
             "total_cost_usd": self._total_cost_usd,
             "llm_call_count": self._call_count,
         }
@@ -192,6 +222,15 @@ class OpenRouterClient(LLMClient):
                 {"prompt": prompt[:_MAX_PROMPT_LOG_CHARS], "model": self._model}
             )
 
+            # Build the reasoning control block. effort takes priority;
+            # fall back to max_tokens; 0 tokens disables reasoning entirely.
+            if self._reasoning_effort is not None:
+                reasoning_cfg: dict[str, int | str] = {"effort": self._reasoning_effort}
+            elif self._reasoning_max_tokens > 0:
+                reasoning_cfg = {"max_tokens": self._reasoning_max_tokens}
+            else:
+                reasoning_cfg = {"effort": "none"}
+
             response = self._client.chat.completions.create(
                 model=self._model,
                 messages=[
@@ -199,7 +238,10 @@ class OpenRouterClient(LLMClient):
                     {"role": "user", "content": prompt},
                 ],
                 temperature=temperature,
+                max_tokens=self._total_max_tokens,
+                stream=False,
                 timeout=_REQUEST_TIMEOUT_SEC,
+                extra_body={"reasoning": reasoning_cfg},
             )
 
             text = response.choices[0].message.content or ""
@@ -207,7 +249,23 @@ class OpenRouterClient(LLMClient):
             latency_sec = round(time.perf_counter() - t0, 2)
             input_tokens = getattr(usage, "prompt_tokens", 0) or 0
             output_tokens = getattr(usage, "completion_tokens", 0) or 0
+            # OpenRouter surfaces reasoning tokens under completion_tokens_details
+            # (mirrors the OpenAI schema; field is optional).
+            completion_details = getattr(usage, "completion_tokens_details", None)
+            thinking_tokens = getattr(completion_details, "reasoning_tokens", 0) or 0
             total_tokens = input_tokens + output_tokens
+
+            # OpenRouter returns actual USD cost in usage.cost (and a per-direction
+            # breakdown in usage.cost_details). No static pricing table is needed.
+            total_cost: float = getattr(usage, "cost", None) or 0.0
+            cost_details = getattr(usage, "cost_details", None)
+            input_cost: float = (
+                getattr(cost_details, "upstream_inference_prompt_cost", None) or 0.0
+            )
+            output_cost: float = (
+                getattr(cost_details, "upstream_inference_completions_cost", None)
+                or 0.0
+            )
 
             span.set_outputs({"response": text})
             span.set_attributes(
@@ -219,13 +277,17 @@ class OpenRouterClient(LLMClient):
                         TokenUsageKey.TOTAL_TOKENS: total_tokens,
                     },
                     SpanAttributeKey.LLM_COST: {
-                        CostKey.INPUT_COST: 0.0,
-                        CostKey.OUTPUT_COST: 0.0,
-                        CostKey.TOTAL_COST: 0.0,
+                        CostKey.INPUT_COST: input_cost,
+                        CostKey.OUTPUT_COST: output_cost,
+                        CostKey.TOTAL_COST: total_cost,
                     },
                     "input_tokens": input_tokens,
+                    "input_cost_usd": input_cost,
                     "output_tokens": output_tokens,
+                    "output_cost_usd": output_cost,
+                    "thinking_tokens": thinking_tokens,
                     "total_tokens": total_tokens,
+                    "total_cost_usd": total_cost,
                     "latency_sec": latency_sec,
                     "prompt_hash": ph,
                 }
@@ -234,6 +296,8 @@ class OpenRouterClient(LLMClient):
         with self._stats_lock:
             self._total_input_tokens += input_tokens
             self._total_output_tokens += output_tokens
+            self._total_thinking_tokens += thinking_tokens
+            self._total_cost_usd += total_cost
             self._call_count += 1
 
         log.info(
@@ -243,6 +307,8 @@ class OpenRouterClient(LLMClient):
             latency_sec=latency_sec,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            thinking_tokens=thinking_tokens,
+            cost_usd=round(total_cost, 6),
         )
         return text, usage
 

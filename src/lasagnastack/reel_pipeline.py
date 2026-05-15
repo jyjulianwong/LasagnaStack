@@ -6,9 +6,7 @@ import structlog
 
 from lasagnastack import io
 from lasagnastack.base import Pipeline, PipelineState, Stage
-from lasagnastack.llm import make_client
 from lasagnastack.llm.base import LLMClient
-from lasagnastack.llm.gemini import GeminiClient
 from lasagnastack.stages.analyse import AnalyseStage
 from lasagnastack.stages.critique import CritiqueStage
 from lasagnastack.stages.direct import DirectStage
@@ -20,7 +18,7 @@ from lasagnastack.stages.render import RenderStage
 log = structlog.get_logger()
 
 
-def _find_brief(input_dir: Path) -> Path:
+def find_brief(input_dir: Path) -> Path:
     """Find the single .txt brief file in input_dir.
 
     Args:
@@ -94,6 +92,27 @@ class ReelPipeline(Pipeline):
             PostCaptionStage(client=self._post_caption_client),
         ]
 
+    def run(self, state: PipelineState, auto_confirm: bool = False) -> PipelineState:
+        """Run all seven stages, then log and print the completion summary.
+
+        Delegates the core orchestration to ``Pipeline.run()`` and appends a
+        structured log entry plus human-readable output paths once all stages
+        have completed.
+
+        Args:
+            state: Initial pipeline state.
+            auto_confirm: When ``True``, skip the interactive confirmation
+                prompt between stages.
+
+        Returns:
+            Final pipeline state after all stages complete.
+        """
+        state = super().run(state, auto_confirm=auto_confirm)
+        log.info("pipeline_complete", draft=str(state.draft_path))
+        print(f"\nDraft saved to: {state.draft_path}")
+        print(f"Post caption saved to: {io.post_caption_path(state.output_dir)}")
+        return state
+
     def _mlflow_run_name(self, state: PipelineState) -> str:
         """Return the MLflow run name, prefixed with ``lasagnastack``.
 
@@ -118,58 +137,3 @@ class ReelPipeline(Pipeline):
             **super()._mlflow_tags(state),
             "model": os.getenv("LSNSTK_LLM_MODEL", "gemini/gemini-2.5-flash"),
         }
-
-
-def run_pipeline(
-    input_dir: Path,
-    output_dir: Path,
-    skill_path: Path | None = None,
-    auto_confirm: bool = False,
-    critique_max_retries: int = 2,
-    ingest_max_workers: int = 2,
-    analyse_max_workers: int = 4,
-) -> None:
-    """Run the full seven-stage pipeline.
-
-    A dedicated ``GeminiClient`` instance is created for each LLM-backed stage.
-    MLflow tracking is optional — the pipeline runs normally if the server is
-    unreachable.
-
-    Args:
-        input_dir: Directory containing MP4/MOV clips and a single ``.txt``
-            creator brief.
-        output_dir: Root directory for all pipeline outputs (normalised clips,
-            inventories, cut list, critique JSONs, and the CapCut draft).
-        skill_path: Optional path to a Markdown skill file injected into the
-            direct, critique, and enhance prompt templates.
-        auto_confirm: When ``True``, skip the interactive confirmation prompt
-            between stages.
-        critique_max_retries: Maximum number of critique iterations before the
-            pipeline ships the current cut list as-is.
-        ingest_max_workers: Parallel worker processes for Stage 1 (ingest).
-        analyse_max_workers: Concurrent LLM calls for Stage 2 (analyse).
-    """
-    brief_path = _find_brief(input_dir)
-    state = PipelineState(
-        input_dir=input_dir,
-        output_dir=output_dir,
-        brief_path=brief_path,
-        skill_path=skill_path,
-        critique_max_retries=critique_max_retries,
-    )
-
-    state = ReelPipeline(
-        ingest_max_workers=ingest_max_workers,
-        analyse_max_workers=analyse_max_workers,
-        analyse_client=GeminiClient(
-            model="gemini/gemini-2.5-flash", thinking_budget=4000
-        ),  # TODO: LLMClient: Not compatible with OpenRouter.
-        direct_client=make_client(thinking_budget=12000),
-        critique_client=make_client(thinking_budget=12000),
-        enhance_client=make_client(thinking_budget=4000),
-        post_caption_client=make_client(thinking_budget=4000),
-    ).run(state, auto_confirm=auto_confirm)
-
-    log.info("pipeline_complete", draft=str(state.draft_path))
-    print(f"\nDraft saved to: {state.draft_path}")
-    print(f"Post caption saved to: {io.post_caption_path(output_dir)}")

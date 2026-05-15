@@ -98,7 +98,9 @@ class GeminiClient(LLMClient):
         self,
         api_key: str | None = None,
         model: str | None = None,
-        thinking_budget: int = 4000,
+        reasoning_max_tokens: int = 4000,
+        reasoning_effort: str | None = None,
+        total_max_tokens: int | None = None,
     ) -> None:
         """Initialise the Gemini client.
 
@@ -108,9 +110,21 @@ class GeminiClient(LLMClient):
             model: Model name to use for all calls (LiteLLM naming convention).
                 Falls back to the ``LSNSTK_LLM_MODEL`` environment
                 variable, then ``"gemini/gemini-2.5-flash"``.
-            thinking_budget: Maximum number of thinking tokens the model may
-                use per call. Set to ``0`` to disable thinking entirely.
+            reasoning_max_tokens: Maximum thinking tokens per call, forwarded
+                as ``thinking_budget`` to the Gemini API. Set to ``0`` to
+                disable thinking entirely. ``reasoning_effort`` and
+                ``total_max_tokens`` are accepted for interface compatibility
+                but are not used by the Gemini API.
+            reasoning_effort: Accepted for interface compatibility; not used
+                by the Gemini native API.
+            total_max_tokens: Accepted for interface compatibility; not used
+                by the Gemini native API.
         """
+        super().__init__(
+            reasoning_max_tokens=reasoning_max_tokens,
+            reasoning_effort=reasoning_effort,
+            total_max_tokens=total_max_tokens,
+        )
         raw_model = model or os.getenv("LSNSTK_LLM_MODEL", "gemini/gemini-2.5-flash")
         self._model = raw_model.removeprefix("gemini/")
         resolved_key = api_key or os.getenv("LSNSTK_LLM_GEMINI_API_KEY")
@@ -119,7 +133,6 @@ class GeminiClient(LLMClient):
                 "Gemini API key not found. Set LSNSTK_LLM_GEMINI_API_KEY in .env or pass api_key=."
             )
         self._client = genai.Client(api_key=resolved_key)
-        self._thinking_budget = thinking_budget
 
         # Per-instance accumulators — updated after every successful API call.
         self._total_input_tokens: int = 0
@@ -294,7 +307,7 @@ class GeminiClient(LLMClient):
                     response_mime_type="application/json",
                     response_schema=response_schema,
                     thinking_config=types.ThinkingConfig(
-                        thinking_budget=self._thinking_budget
+                        thinking_budget=self._reasoning_max_tokens
                     ),
                 ),
             )

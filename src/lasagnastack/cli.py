@@ -60,14 +60,46 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command == "make":
-        from lasagnastack.pipeline import run_pipeline
+        from lasagnastack.base import PipelineState
+        from lasagnastack.llm import make_client
+        from lasagnastack.llm.gemini import GeminiClient
+        from lasagnastack.reel_pipeline import ReelPipeline, find_brief
 
-        run_pipeline(
+        brief_path = find_brief(args.input_dir)
+        state = PipelineState(
             input_dir=args.input_dir,
             output_dir=args.out,
+            brief_path=brief_path,
             skill_path=args.skill,
-            auto_confirm=args.yes,
             critique_max_retries=args.critique_max_retries,
+        )
+        ReelPipeline(
             ingest_max_workers=args.ingest_max_workers,
             analyse_max_workers=args.analyse_max_workers,
-        )
+            analyse_client=GeminiClient(
+                model="gemini/gemini-2.5-flash",
+                reasoning_max_tokens=4000,
+                reasoning_effort="low",
+                total_max_tokens=12000,
+            ),  # TODO: LLMClient: Not compatible with OpenRouter.
+            direct_client=make_client(
+                reasoning_max_tokens=12000,
+                reasoning_effort="medium",
+                total_max_tokens=24000,
+            ),
+            critique_client=make_client(
+                reasoning_max_tokens=12000,
+                reasoning_effort="medium",
+                total_max_tokens=24000,
+            ),
+            enhance_client=make_client(
+                reasoning_max_tokens=4000,
+                reasoning_effort="low",
+                total_max_tokens=12000,
+            ),
+            post_caption_client=make_client(
+                reasoning_max_tokens=4000,
+                reasoning_effort="low",
+                total_max_tokens=12000,
+            ),
+        ).run(state, auto_confirm=args.yes)

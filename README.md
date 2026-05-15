@@ -177,6 +177,9 @@ uv run python -m lasagnastack make ./my_clips/ --out ./drafts/reel_2025_05_05 --
 | `critique` stage maximum # of retries | `--critique-max-retries` CLI flag | `2` |
 | `ingest` stage maximum # of worker processes | `--ingest-max-workers` CLI flag | `2` |
 | `analyse` stage maximum # of concurrent LLM calls | `--analyse-max-workers` CLI flag | `4` |
+| Reasoning token budget | `reasoning_max_tokens` arg on `LLMClient` / `make_client()` | `4000` |
+| Reasoning effort level | `reasoning_effort` arg on `LLMClient` / `make_client()` (OpenRouter only) | `None` |
+| Total output token ceiling | `total_max_tokens` arg on `LLMClient` / `make_client()` (OpenRouter only) | `None` |
 | MLflow tracking server | `MLFLOW_TRACKING_URI` env. var. | `sqlite:///$HOME/.lasagnastack/mlflow.db` |
 | MLflow experiment name | `MLFLOW_EXPERIMENT_NAME` env. var. | `lasagnastack` |
 
@@ -208,7 +211,7 @@ jupyter lab
 
 ### Track LLM costs with MLflow
 
-Every pipeline run is automatically traced with [MLflow](https://mlflow.org). Each LLM API call is recorded as a span (prompt, response, token counts, and latency; Gemini also reports estimated USD cost). Session-level totals are written to the run when the pipeline finishes.
+Every pipeline run is automatically traced with [MLflow](https://mlflow.org). Each LLM API call is recorded as a span (prompt, response, token counts, latency, and USD cost). `GeminiClient` derives cost from a built-in pricing table; `OpenRouterClient` reads cost directly from the `usage.cost` field in the API response. Session-level totals are written to the run when the pipeline finishes.
 
 Tracking works out of the box with no setup — runs are written to `~/.lasagnastack/mlflow.db` automatically.
 
@@ -240,7 +243,7 @@ Note that runs already stored in `~/.lasagnastack/mlflow.db` will not appear on 
 
 - The pipeline is modularlised into stages, with each stage being responsible for transforming the global state of the pipeline run (similar to LangGraph). It is easy to add, remove, or reorder stages.
 - The pipeline supports "skills" -- each user can write their own skill `.md` file to customise the pipeline to their own accounts' styles and branding, or use pre-written skills from marketplaces to cater for different types of reel content.
-- Chain-of-thought reasoning is enabled via Gemini's thinking token budget (configurable per stage).
+- Chain-of-thought reasoning is supported for both Gemini and OpenRouter models, controlled per-client via `reasoning_max_tokens` (token budget), `reasoning_effort` (qualitative level, OpenRouter only), and `total_max_tokens` (total output ceiling, required for some Anthropic models).
 - Human-in-the-loop is deeply integrated in the design, with each stage prompting the user for confirmation before proceeding to the next stage.
 - Prompt caching is enabled to avoid unnecessary LLM calls to reduce latency and cost.
 - The tool is deeply integrated with its host machine. It auto-detects CapCut Desktop, copies all source media (timeline clips and unused footage) so the project opens in CapCut with no missing-media errors, no manual steps, all your raw clips already in the import panel, and the timeline editor populated and ready to go.

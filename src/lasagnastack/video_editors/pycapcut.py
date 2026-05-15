@@ -150,7 +150,7 @@ class PyCapCutAdapter(VideoEditorAdapter):
 
                 script.add_segment(txt_seg, "captions")
 
-            log.info("render_cut", order=cut.order, src=cut.source_file)
+            log.info("render_cut", order=cut.order, source=cut.source_file)
             timeline_pos += target_duration_us
 
         overlay_style_map: dict[int, CaptionEffect] = {}
@@ -393,7 +393,7 @@ def _export_to_capcut(
             clip_dest = dest / video_file.name
             shutil.copy2(src, clip_dest)
             path_map[str(src)] = str(clip_dest)
-            log.info("render_copy_clip", src=str(src), dest=str(clip_dest))
+            log.info("render_copy_clip", source=str(src), dest=str(clip_dest))
 
     content_path = dest / "draft_info.json"
     content = json.loads(content_path.read_text(encoding="utf-8"))

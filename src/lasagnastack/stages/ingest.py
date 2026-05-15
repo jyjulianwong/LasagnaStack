@@ -11,6 +11,7 @@ from scenedetect.scene_manager import SceneManager
 from lasagnastack import io
 from lasagnastack.base import PipelineState, Stage
 from lasagnastack.cache import DiskCache
+from lasagnastack.logging_config import configure_logging
 from lasagnastack.models.inventory import NormalisedClip
 
 log = structlog.get_logger()
@@ -84,7 +85,9 @@ def run(
     cache_dir = io.cache_dir(output_dir)
 
     if max_workers > 1:
-        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        with ProcessPoolExecutor(
+            max_workers=max_workers, initializer=configure_logging
+        ) as executor:
             process_results = list(
                 executor.map(_process_clip, clips, dests, itertools.repeat(cache_dir))
             )
@@ -156,7 +159,7 @@ def _detect_scene_cuts(clip_path: Path) -> list[float]:
         manager.detect_scenes(video, show_progress=False)
         scene_list = manager.get_scene_list(start_in_scene=True)
     except Exception:
-        log.warning("scene_detect_failed", clip=clip_path.name, exc_info=True)
+        log.warning("scene_detect_failed", source=clip_path.name, exc_info=True)
         return []
     # scene_list is [(start, end), ...]; cut times are the start of each scene after the first
     return [scene[0].seconds for scene in scene_list[1:]]
