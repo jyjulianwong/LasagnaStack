@@ -1,6 +1,6 @@
 # LasagnaStack
 
-<img src="docs/lasagna.png" alt="LasagnaStack" width="180" />
+<img src="https://github.com/user-attachments/assets/c5107758-8c1d-4ee1-a98e-618540b80318" alt="LasagnaStack" width="180" />
 
 An AI pipeline that turns raw video clips into an editable CapCut project for short-form reel editing.
 
@@ -51,7 +51,7 @@ pip install lasagnastack
 
 You will need to provide your own API keys for the LLM APIs you use. The required API key depends on the value of `LSNSTK_LLM_MODEL`.
 
-### Gemini (e.g. `gemini/gemini-2.5-flash`)
+#### Gemini (e.g. `gemini/gemini-2.5-flash`)
 
 Get a key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) and set it as an environment variable:
 
@@ -60,7 +60,7 @@ export LSNSTK_LLM_MODEL=gemini/gemini-2.5-flash
 export LSNSTK_LLM_GEMINI_API_KEY=your-key-here
 ```
 
-### OpenRouter (e.g. `openrouter/deepseek/deepseek-v3.2`)
+#### OpenRouter (e.g. `openrouter/deepseek/deepseek-v3.2`)
 
 Get a key at [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys) and set these environment variables:
 
