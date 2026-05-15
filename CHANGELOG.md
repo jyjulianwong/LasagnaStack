@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.2 (2026-05-15)
+
+### Bug Fixes
+
+- Updated instructions and documentation ([#4](https://github.com/jyjulianwong/LasagnaStack/pull/4),
+  [`1d6ecc3`](https://github.com/jyjulianwong/LasagnaStack/commit/1d6ecc39a5ea3689fcf81c2a91de855e7525cd9a))
+
+
 ## v1.0.1 (2026-05-13)
 
 ### Bug Fixes
