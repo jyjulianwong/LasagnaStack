@@ -1,6 +1,6 @@
 # LasagnaStack
 
-<img src="docs/lasagna.png" alt="LasagnaStack" width="180" />
+<img src="https://github.com/user-attachments/assets/c5107758-8c1d-4ee1-a98e-618540b80318" alt="LasagnaStack" width="180" />
 
 An AI pipeline that turns raw video clips into an editable CapCut project for short-form reel editing.
 
