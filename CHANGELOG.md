@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.0.3 (2026-05-15)
+
+### Bug Fixes
+
+- Made logging prettier, added reasoning and cost support for OpenRouter
+  ([#5](https://github.com/jyjulianwong/LasagnaStack/pull/5),
+  [`55786d7`](https://github.com/jyjulianwong/LasagnaStack/commit/55786d7ced98dde0cccc3b191cc726e7c6994ced))
+
+
 ## v1.0.2 (2026-05-15)
 
 ### Bug Fixes
