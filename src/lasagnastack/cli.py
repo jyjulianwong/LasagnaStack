@@ -77,10 +77,29 @@ def main() -> None:
             ingest_max_workers=args.ingest_max_workers,
             analyse_max_workers=args.analyse_max_workers,
             analyse_client=GeminiClient(
-                model="gemini/gemini-2.5-flash", thinking_budget=4000
+                model="gemini/gemini-2.5-flash",
+                reasoning_max_tokens=4000,
+                reasoning_effort="low",
+                total_max_tokens=12000,
             ),  # TODO: LLMClient: Not compatible with OpenRouter.
-            direct_client=make_client(thinking_budget=12000),
-            critique_client=make_client(thinking_budget=12000),
-            enhance_client=make_client(thinking_budget=4000),
-            post_caption_client=make_client(thinking_budget=4000),
+            direct_client=make_client(
+                reasoning_max_tokens=12000,
+                reasoning_effort="medium",
+                total_max_tokens=24000,
+            ),
+            critique_client=make_client(
+                reasoning_max_tokens=12000,
+                reasoning_effort="medium",
+                total_max_tokens=24000,
+            ),
+            enhance_client=make_client(
+                reasoning_max_tokens=4000,
+                reasoning_effort="low",
+                total_max_tokens=12000,
+            ),
+            post_caption_client=make_client(
+                reasoning_max_tokens=4000,
+                reasoning_effort="low",
+                total_max_tokens=12000,
+            ),
         ).run(state, auto_confirm=args.yes)
