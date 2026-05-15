@@ -152,6 +152,10 @@ class Pipeline(ABC):
         name so traces show e.g. ``AnalyseStage.run`` rather than ``Stage.run``.
         ``mlflow.start_span`` is a no-op when no active run exists.
 
+        Binds ``stage=`` to the structlog context for the duration of the
+        stage so every log line emitted inside the stage carries the stage
+        name automatically, without each call site needing to pass it.
+
         Args:
             stage: The stage to execute.
             state: Current pipeline state passed to the stage.
@@ -160,11 +164,15 @@ class Pipeline(ABC):
             Updated pipeline state returned by the stage.
         """
         span_name = f"{type(stage).__name__}.run"
-        with mlflow.start_span(
-            name=span_name,
-            span_type=mlflow.entities.SpanType.CHAIN,
-        ):
-            return stage.run(state)
+        structlog.contextvars.bind_contextvars(stage=type(stage).__name__)
+        try:
+            with mlflow.start_span(
+                name=span_name,
+                span_type=mlflow.entities.SpanType.CHAIN,
+            ):
+                return stage.run(state)
+        finally:
+            structlog.contextvars.unbind_contextvars("stage")
 
     def run(self, state: PipelineState, auto_confirm: bool = False) -> PipelineState:
         """Run all stages in order, wrapped in MLflow tracking.
