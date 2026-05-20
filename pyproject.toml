@@ -22,7 +22,7 @@ dependencies = [
     "pydantic>=2.0.0",
     "python-dotenv>=1.0.0",
     "scenedetect>=0.6.4",
-    "setuptools>=80.9.0",
+    "setuptools==80.9.0",  # TODO: We depend on pkg_resources.
     "structlog>=25.0.0",
     "tenacity>=9.0.0",
 ]
