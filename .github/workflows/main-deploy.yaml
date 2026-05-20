@@ -140,8 +140,9 @@ jobs:
       - name: 🍺 Tap jyjulianwong/lasagnastack from local checkout
         run: brew tap jyjulianwong/lasagnastack "$(pwd)/tap"
 
+      # TODO: Raise as a critical dependency issue.
       - name: ♻️ Regenerate resource blocks
-        run: brew update-python-resources --ignore-missing-sources jyjulianwong/lasagnastack/lasagnastack
+        run: brew update-python-resources --exclude-packages opencv-python,opencv-python-headless jyjulianwong/lasagnastack/lasagnastack
 
       - name: 🚀 Commit and push
         run: |
