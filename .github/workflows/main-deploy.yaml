@@ -137,7 +137,7 @@ jobs:
       - name: 📦 Package binary into tar.gz and compute sha256
         id: package
         run: |
-          TARBALL="lasagnastack-macos-${{ matrix.arch }}.tar.gz"
+          TARBALL="lasagnastack-${{ needs.version_bump.outputs.version }}-macos-${{ matrix.arch }}.tar.gz"
           tar -czf "$TARBALL" -C dist lasagnastack
           SHA256=$(shasum -a 256 "$TARBALL" | awk '{print $1}')
           echo "tarball=${TARBALL}" >> "$GITHUB_OUTPUT"
@@ -193,6 +193,7 @@ jobs:
           formula = pathlib.Path("tap/Formula/lasagnastack.rb")
           text = formula.read_text()
 
+          version = os.environ["VERSION"]
           tag = os.environ["TAG"]
           arm64_sha256 = pathlib.Path("sha256-arm64.txt").read_text().strip()
           x86_64_sha256 = pathlib.Path("sha256-x86_64.txt").read_text().strip()
@@ -200,10 +201,13 @@ jobs:
           # Remove "include Language::Python::Virtualenv" line
           text = re.sub(r"  include Language::Python::Virtualenv\n+", "", text)
 
-          # Replace url with arm64 binary tarball GitHub Release URL
+          # Remove any existing bottle block so we don't end up with duplicates
+          text = re.sub(r'\n  bottle do\n(?:.*\n)*?  end\n', '\n', text)
+
+          # Replace url with versioned arm64 binary tarball GitHub Release URL
           text = re.sub(
               r'  url "[^"]+"',
-              f'  url "https://github.com/jyjulianwong/LasagnaStack/releases/download/{tag}/lasagnastack-macos-arm64.tar.gz"',
+              f'  url "https://github.com/jyjulianwong/LasagnaStack/releases/download/{tag}/lasagnastack-{version}-macos-arm64.tar.gz"',
               text,
               count=1,
           )
