@@ -99,26 +99,81 @@ jobs:
       - name: 🚀 Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
 
-  update_homebrew:
+  build_binaries:
     needs: [version_bump, publish_pypi]
+    if: needs.version_bump.outputs.released == 'true'
+    strategy:
+      matrix:
+        include:
+          - runner: macos-latest
+            arch: arm64
+          - runner: macos-13
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: write
+    steps:
+      - name: ⚙️ Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version_bump.outputs.tag }}
+
+      - name: ⚙️ Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 📦 Install PyInstaller and package
+        run: |
+          pip install pyinstaller
+          pip install .
+
+      - name: 🔨 Build single-file binary
+        run: |
+          pyinstaller --onefile --name lasagnastack \
+            --collect-all lasagnastack \
+            src/lasagnastack/__main__.py
+
+      - name: 📦 Package binary into tar.gz and compute sha256
+        id: package
+        run: |
+          TARBALL="lasagnastack-macos-${{ matrix.arch }}.tar.gz"
+          tar -czf "$TARBALL" -C dist lasagnastack
+          SHA256=$(shasum -a 256 "$TARBALL" | awk '{print $1}')
+          echo "tarball=${TARBALL}" >> "$GITHUB_OUTPUT"
+          echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
+
+      - name: 🚀 Upload tarball to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ needs.version_bump.outputs.tag }}" \
+            "${{ steps.package.outputs.tarball }}" \
+            --clobber
+
+      - name: 💾 Save sha256 as artifact
+        run: echo "${{ steps.package.outputs.sha256 }}" > sha256-${{ matrix.arch }}.txt
+
+      - name: ⬆️ Upload sha256 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sha256-${{ matrix.arch }}
+          path: sha256-${{ matrix.arch }}.txt
+
+  update_homebrew:
+    needs: [version_bump, build_binaries]
+    if: needs.version_bump.outputs.released == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: ⏳ Wait for PyPI CDN propagation
-        run: sleep 60
+      - name: ⬇️ Download arm64 sha256
+        uses: actions/download-artifact@v4
+        with:
+          name: sha256-arm64
 
-      - name: 🔍 Fetch SHA256 from PyPI
-        id: pypi
-        run: |
-          VERSION="${{ needs.version_bump.outputs.version }}"
-          JSON=$(curl -fsSL "https://pypi.org/pypi/lasagnastack/${VERSION}/json")
-          SHA256=$(echo "$JSON" | python3 -c "
-          import sys, json
-          data = json.load(sys.stdin)
-          sdist = next(u for u in data['urls'] if u['packagetype'] == 'sdist')
-          print(sdist['digests']['sha256'])
-          ")
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
+      - name: ⬇️ Download x86_64 sha256
+        uses: actions/download-artifact@v4
+        with:
+          name: sha256-x86_64
 
       - name: ⚙️ Check out tap repo
         uses: actions/checkout@v4
@@ -127,75 +182,76 @@ jobs:
           token: ${{ secrets.TAP_GITHUB_TOKEN }}
           path: tap
 
-      - name: ✏️ Update formula url and sha256
+      - name: ✏️ Update formula for binary distribution
+        env:
+          VERSION: ${{ needs.version_bump.outputs.version }}
+          TAG: ${{ needs.version_bump.outputs.tag }}
         run: |
-          VERSION="${{ steps.pypi.outputs.version }}"
-          SHA256="${{ steps.pypi.outputs.sha256 }}"
-          sed -i "s|lasagnastack-.*\.tar\.gz\"|lasagnastack-${VERSION}.tar.gz\"|" tap/Formula/lasagnastack.rb
-          sed -i 's|^  sha256 "[a-f0-9]*"|  sha256 "'"${SHA256}"'"|' tap/Formula/lasagnastack.rb
-
-      - name: ♻️ Regenerate resource blocks
-        run: |
-          VERSION="${{ steps.pypi.outputs.version }}"
-          python3 -m venv /tmp/poet-venv
-          /tmp/poet-venv/bin/pip install --quiet "lasagnastack==${VERSION}" homebrew-pypi-poet
-          /tmp/poet-venv/bin/poet --resources lasagnastack > /tmp/resources.txt
           python3 - << 'PYEOF'
-          import json, re, pathlib, urllib.request
-
-          # opencv-python-headless has no sdist; handled separately as arch-specific wheel resources
-          EXCLUDE = {"opencv-python", "opencv-python-headless"}
-          raw = pathlib.Path("/tmp/resources.txt").read_text()
-
-          blocks = re.findall(r'  resource "[^"]+" do\n(?:.*\n)*?  end', raw)
-          kept = "\n\n".join(b for b in blocks if not any(f'resource "{p}"' in b for p in EXCLUDE))
-
-          # Fetch the latest opencv-python-headless cp312 wheels for both macOS architectures
-          cv_json = json.loads(urllib.request.urlopen(
-              "https://pypi.org/pypi/opencv-python-headless/json"
-          ).read())
-          wheels = {u["filename"]: u for u in cv_json["urls"] if "cp312" in u["filename"]}
-
-          def find_wheel(tag: str):
-              for fname, u in wheels.items():
-                  if tag in fname:
-                      return u["url"], u["digests"]["sha256"]
-              raise RuntimeError(f"No cp312 wheel found for {tag!r}")
-
-          arm_url, arm_sha = find_wheel("arm64")
-          x86_url, x86_sha = find_wheel("x86_64")
-
-          cv_blocks = (
-              f'  on_arm do\n'
-              f'    resource "opencv-python-headless" do\n'
-              f'      url "{arm_url}"\n'
-              f'      sha256 "{arm_sha}"\n'
-              f'    end\n'
-              f'  end\n\n'
-              f'  on_intel do\n'
-              f'    resource "opencv-python-headless" do\n'
-              f'      url "{x86_url}"\n'
-              f'      sha256 "{x86_sha}"\n'
-              f'    end\n'
-              f'  end'
-          )
-
-          all_resources = kept + "\n\n" + cv_blocks
+          import re, pathlib, os
 
           formula = pathlib.Path("tap/Formula/lasagnastack.rb")
           text = formula.read_text()
 
-          # Replace the existing resource / on_arm / on_intel section, or insert before def install
-          existing = re.search(
-              r'\n(  (?:resource "[^"]+"|on_(?:arm|intel)) do\n(?:.*\n)*?  end\n?)+',
+          tag = os.environ["TAG"]
+          arm64_sha256 = pathlib.Path("sha256-arm64.txt").read_text().strip()
+          x86_64_sha256 = pathlib.Path("sha256-x86_64.txt").read_text().strip()
+
+          # Remove "include Language::Python::Virtualenv" line
+          text = re.sub(r"  include Language::Python::Virtualenv\n+", "", text)
+
+          # Replace url with arm64 binary tarball GitHub Release URL
+          text = re.sub(
+              r'  url "[^"]+"',
+              f'  url "https://github.com/jyjulianwong/LasagnaStack/releases/download/{tag}/lasagnastack-macos-arm64.tar.gz"',
+              text,
+              count=1,
+          )
+
+          # Replace top-level sha256 (first occurrence, before any resource blocks)
+          text = re.sub(
+              r'^  sha256 "[a-f0-9]+"',
+              f'  sha256 "{arm64_sha256}"',
+              text,
+              count=1,
+              flags=re.MULTILINE,
+          )
+
+          # Insert bottle block after license line
+          bottle_block = (
+              '\n  bottle do\n'
+              f'    sha256 cellar: :any_skip_relocation, arm64_sequoia: "{arm64_sha256}"\n'
+              f'    sha256 cellar: :any_skip_relocation, sequoia:       "{x86_64_sha256}"\n'
+              '  end\n'
+          )
+          text = re.sub(
+              r'(  license "[^"]+"\n)',
+              r'\1' + bottle_block,
+              text,
+              count=1,
+          )
+
+          # Remove depends_on "python@3.12"
+          text = re.sub(r'  depends_on "python@3\.12"\n', "", text)
+
+          # Remove opencv comment lines that follow the depends_on block
+          text = re.sub(r'  # opencv-python-headless[^\n]*\n(?:  #[^\n]*\n)*', "", text)
+
+          # Remove all resource blocks
+          text = re.sub(r'\n\n  resource "[^"]+" do\n(?:.*\n)*?  end', "", text)
+
+          # Replace virtualenv_install_with_resources with binary install
+          text = re.sub(
+              r'    virtualenv_install_with_resources[^\n]*\n',
+              '    bin.install "lasagnastack"\n',
               text,
           )
-          if existing:
-              text = text[: existing.start()] + "\n\n" + all_resources + "\n\n" + text[existing.end():]
-          else:
-              text = text.replace("\n  def install", "\n\n" + all_resources + "\n\n  def install", 1)
+
+          # Normalize runs of 3+ blank lines down to 2
+          text = re.sub(r'\n{3,}', '\n\n', text)
 
           formula.write_text(text)
+          print("Formula updated successfully.")
           PYEOF
 
       - name: 🚀 Commit and push
@@ -205,5 +261,5 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Formula/lasagnastack.rb
           git diff --cached --quiet && exit 0
-          git commit -m "chore: bump lasagnastack to ${{ steps.pypi.outputs.version }}"
+          git commit -m "chore: bump lasagnastack to ${{ needs.version_bump.outputs.version }}"
           git push
