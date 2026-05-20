@@ -141,25 +141,59 @@ jobs:
           /tmp/poet-venv/bin/pip install --quiet "lasagnastack==${VERSION}" homebrew-pypi-poet
           /tmp/poet-venv/bin/poet --resources lasagnastack > /tmp/resources.txt
           python3 - << 'PYEOF'
-          import re, pathlib
+          import json, re, pathlib, urllib.request
 
-          # TODO: Raise as a critical dependency issue.
-          # Binary-only packages with no sdist — must be omitted from resource blocks
+          # opencv-python-headless has no sdist; handled separately as arch-specific wheel resources
           EXCLUDE = {"opencv-python", "opencv-python-headless"}
           raw = pathlib.Path("/tmp/resources.txt").read_text()
 
           blocks = re.findall(r'  resource "[^"]+" do\n(?:.*\n)*?  end', raw)
           kept = "\n\n".join(b for b in blocks if not any(f'resource "{p}"' in b for p in EXCLUDE))
 
+          # Fetch the latest opencv-python-headless cp312 wheels for both macOS architectures
+          cv_json = json.loads(urllib.request.urlopen(
+              "https://pypi.org/pypi/opencv-python-headless/json"
+          ).read())
+          wheels = {u["filename"]: u for u in cv_json["urls"] if "cp312" in u["filename"]}
+
+          def find_wheel(tag: str):
+              for fname, u in wheels.items():
+                  if tag in fname:
+                      return u["url"], u["digests"]["sha256"]
+              raise RuntimeError(f"No cp312 wheel found for {tag!r}")
+
+          arm_url, arm_sha = find_wheel("arm64")
+          x86_url, x86_sha = find_wheel("x86_64")
+
+          cv_blocks = (
+              f'  on_arm do\n'
+              f'    resource "opencv-python-headless" do\n'
+              f'      url "{arm_url}"\n'
+              f'      sha256 "{arm_sha}"\n'
+              f'    end\n'
+              f'  end\n\n'
+              f'  on_intel do\n'
+              f'    resource "opencv-python-headless" do\n'
+              f'      url "{x86_url}"\n'
+              f'      sha256 "{x86_sha}"\n'
+              f'    end\n'
+              f'  end'
+          )
+
+          all_resources = kept + "\n\n" + cv_blocks
+
           formula = pathlib.Path("tap/Formula/lasagnastack.rb")
           text = formula.read_text()
 
-          # Replace the existing resource block section, or insert before def install
-          existing = re.search(r'\n(  resource "[^"]+" do\n(?:.*\n)*?  end\n?)+', text)
+          # Replace the existing resource / on_arm / on_intel section, or insert before def install
+          existing = re.search(
+              r'\n(  (?:resource "[^"]+"|on_(?:arm|intel)) do\n(?:.*\n)*?  end\n?)+',
+              text,
+          )
           if existing:
-              text = text[: existing.start()] + "\n\n" + kept + "\n\n" + text[existing.end() :]
+              text = text[: existing.start()] + "\n\n" + all_resources + "\n\n" + text[existing.end():]
           else:
-              text = text.replace("\n  def install", "\n\n" + kept + "\n\n  def install", 1)
+              text = text.replace("\n  def install", "\n\n" + all_resources + "\n\n  def install", 1)
 
           formula.write_text(text)
           PYEOF
