@@ -137,7 +137,12 @@ jobs:
       - name: 📦 Package binary into tar.gz and compute sha256
         id: package
         run: |
-          TARBALL="lasagnastack-${{ needs.version_bump.outputs.version }}-macos-${{ matrix.arch }}.tar.gz"
+          # Use "arm"/"intel" instead of "arm64"/"x86_64" to avoid Homebrew's
+          # version parser treating digits in the arch label as a version number.
+          ARCH_LABEL="${{ matrix.arch }}"
+          if [ "$ARCH_LABEL" = "arm64" ]; then ARCH_LABEL="silicon"; fi
+          if [ "$ARCH_LABEL" = "x86_64" ]; then ARCH_LABEL="intel"; fi
+          TARBALL="lasagnastack-${{ needs.version_bump.outputs.version }}-macos-${ARCH_LABEL}.tar.gz"
           tar -czf "$TARBALL" -C dist lasagnastack
           SHA256=$(shasum -a 256 "$TARBALL" | awk '{print $1}')
           echo "tarball=${TARBALL}" >> "$GITHUB_OUTPUT"
@@ -201,36 +206,29 @@ jobs:
           # Remove "include Language::Python::Virtualenv" line
           text = re.sub(r"  include Language::Python::Virtualenv\n+", "", text)
 
-          # Remove any existing bottle block so we don't end up with duplicates
+          # Remove any existing bottle / on_arm / on_intel blocks
           text = re.sub(r'\n  bottle do\n(?:.*\n)*?  end\n', '\n', text)
+          text = re.sub(r'\n  on_arm do\n(?:.*\n)*?  end\n', '\n', text)
+          text = re.sub(r'\n  on_intel do\n(?:.*\n)*?  end\n', '\n', text)
 
-          # Replace url with versioned arm64 binary tarball GitHub Release URL
-          text = re.sub(
-              r'  url "[^"]+"',
-              f'  url "https://github.com/jyjulianwong/LasagnaStack/releases/download/{tag}/lasagnastack-{version}-macos-arm64.tar.gz"',
-              text,
-              count=1,
-          )
+          # Remove top-level url and sha256 if present (replaced by on_arm/on_intel blocks)
+          text = re.sub(r'  url "[^"]+"\n', '', text, count=1)
+          text = re.sub(r'^  sha256 "[a-f0-9]+"\n', '', text, count=1, flags=re.MULTILINE)
 
-          # Replace top-level sha256 (first occurrence, before any resource blocks)
-          text = re.sub(
-              r'^  sha256 "[a-f0-9]+"',
-              f'  sha256 "{arm64_sha256}"',
-              text,
-              count=1,
-              flags=re.MULTILINE,
-          )
-
-          # Insert bottle block after license line
-          bottle_block = (
-              '\n  bottle do\n'
-              f'    sha256 cellar: :any_skip_relocation, arm64_sequoia: "{arm64_sha256}"\n'
-              f'    sha256 cellar: :any_skip_relocation, sequoia:       "{x86_64_sha256}"\n'
+          # Insert on_arm / on_intel blocks after the license line
+          arch_blocks = (
+              '\n  on_arm do\n'
+              f'    url "https://github.com/jyjulianwong/LasagnaStack/releases/download/{tag}/lasagnastack-{version}-macos-silicon.tar.gz"\n'
+              f'    sha256 "{arm64_sha256}"\n'
+              '  end\n\n'
+              '  on_intel do\n'
+              f'    url "https://github.com/jyjulianwong/LasagnaStack/releases/download/{tag}/lasagnastack-{version}-macos-intel.tar.gz"\n'
+              f'    sha256 "{x86_64_sha256}"\n'
               '  end\n'
           )
           text = re.sub(
               r'(  license "[^"]+"\n)',
-              r'\1' + bottle_block,
+              r'\1' + arch_blocks,
               text,
               count=1,
           )
