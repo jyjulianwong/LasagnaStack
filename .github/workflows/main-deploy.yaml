@@ -132,17 +132,37 @@ jobs:
           VERSION="${{ steps.pypi.outputs.version }}"
           SHA256="${{ steps.pypi.outputs.sha256 }}"
           sed -i "s|lasagnastack-.*\.tar\.gz\"|lasagnastack-${VERSION}.tar.gz\"|" tap/Formula/lasagnastack.rb
-          sed -i 's|sha256 "[a-f0-9]*"|sha256 "'"${SHA256}"'"|' tap/Formula/lasagnastack.rb
+          sed -i 's|^  sha256 "[a-f0-9]*"|  sha256 "'"${SHA256}"'"|' tap/Formula/lasagnastack.rb
 
-      - name: ⚙️ Set up Homebrew
-        uses: Homebrew/actions/setup-homebrew@master
-
-      - name: 🍺 Tap jyjulianwong/lasagnastack from local checkout
-        run: brew tap jyjulianwong/lasagnastack "$(pwd)/tap"
-
-      # TODO: Raise as a critical dependency issue.
       - name: ♻️ Regenerate resource blocks
-        run: brew update-python-resources --exclude-packages opencv-python,opencv-python-headless jyjulianwong/lasagnastack/lasagnastack
+        run: |
+          VERSION="${{ steps.pypi.outputs.version }}"
+          python3 -m venv /tmp/poet-venv
+          /tmp/poet-venv/bin/pip install --quiet "lasagnastack==${VERSION}" homebrew-pypi-poet
+          /tmp/poet-venv/bin/poet --resources lasagnastack > /tmp/resources.txt
+          python3 - << 'PYEOF'
+          import re, pathlib
+
+          # TODO: Raise as a critical dependency issue.
+          # Binary-only packages with no sdist — must be omitted from resource blocks
+          EXCLUDE = {"opencv-python", "opencv-python-headless"}
+          raw = pathlib.Path("/tmp/resources.txt").read_text()
+
+          blocks = re.findall(r'  resource "[^"]+" do\n(?:.*\n)*?  end', raw)
+          kept = "\n\n".join(b for b in blocks if not any(f'resource "{p}"' in b for p in EXCLUDE))
+
+          formula = pathlib.Path("tap/Formula/lasagnastack.rb")
+          text = formula.read_text()
+
+          # Replace the existing resource block section, or insert before def install
+          existing = re.search(r'\n(  resource "[^"]+" do\n(?:.*\n)*?  end\n?)+', text)
+          if existing:
+              text = text[: existing.start()] + "\n\n" + kept + "\n\n" + text[existing.end() :]
+          else:
+              text = text.replace("\n  def install", "\n\n" + kept + "\n\n  def install", 1)
+
+          formula.write_text(text)
+          PYEOF
 
       - name: 🚀 Commit and push
         run: |
