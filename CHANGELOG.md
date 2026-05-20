@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.0.4 (2026-05-20)
+
+### Bug Fixes
+
+- Updated main-deploy.yaml to include Python dependency installation for Homebrew formula
+  ([#6](https://github.com/jyjulianwong/LasagnaStack/pull/6),
+  [`b24bdee`](https://github.com/jyjulianwong/LasagnaStack/commit/b24bdeecd814ce704a5ffb8ca90a8d61dcf5d183))
+
+
 ## v1.0.3 (2026-05-15)
 
 ### Bug Fixes
