@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.8 (2026-05-20)
+
+### Bug Fixes
+
+- Fixed pkg_resources dependency issue ([#10](https://github.com/jyjulianwong/LasagnaStack/pull/10),
+  [`93f1afc`](https://github.com/jyjulianwong/LasagnaStack/commit/93f1afc15cb5c23101e8a16efaf8e1a526342e8c))
+
+
 ## v1.0.7 (2026-05-20)
 
 ### Bug Fixes
