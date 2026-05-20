@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.13 (2026-05-20)
+
+### Bug Fixes
+
+- Fixed main-deploy.yaml
+  ([`06ca623`](https://github.com/jyjulianwong/LasagnaStack/commit/06ca6237bbff2ed651b91ffe28cfd7dc94b5504a))
+
+
 ## v1.0.12 (2026-05-20)
 
 ### Bug Fixes
