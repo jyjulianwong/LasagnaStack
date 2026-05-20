@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.9 (2026-05-20)
+
+### Bug Fixes
+
+- Fixed opencv dependency issue ([#11](https://github.com/jyjulianwong/LasagnaStack/pull/11),
+  [`b0f11df`](https://github.com/jyjulianwong/LasagnaStack/commit/b0f11df555b00b2043e2f82d00eac3e2e07fa88c))
+
+
 ## v1.0.8 (2026-05-20)
 
 ### Bug Fixes
