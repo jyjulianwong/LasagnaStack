@@ -141,7 +141,7 @@ jobs:
         run: brew tap jyjulianwong/lasagnastack "$(pwd)/tap"
 
       - name: ♻️ Regenerate resource blocks
-        run: brew update-python-resources jyjulianwong/lasagnastack/lasagnastack
+        run: brew update-python-resources --ignore-missing-sources jyjulianwong/lasagnastack/lasagnastack
 
       - name: 🚀 Commit and push
         run: |
