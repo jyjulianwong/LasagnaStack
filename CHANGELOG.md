@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.15 (2026-05-21)
+
+### Bug Fixes
+
+- Fixed MLflow files
+  ([`623966d`](https://github.com/jyjulianwong/LasagnaStack/commit/623966d18ddf7d54a3ea912cc49e54432d0de3f1))
+
+
 ## v1.0.14 (2026-05-21)
 
 ### Bug Fixes
