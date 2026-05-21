@@ -58,6 +58,9 @@ notebook = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"lasagnastack.prompts" = ["*.md"]
+
 [tool.ruff]
 line-length = 88
 indent-width = 4

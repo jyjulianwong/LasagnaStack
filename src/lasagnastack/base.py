@@ -1,4 +1,5 @@
 import os
+import sys
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Generator
@@ -20,6 +21,25 @@ log = structlog.get_logger()
 _DEFAULT_MLFLOW_TRACKING_URI = (
     f"sqlite:///{Path.home() / '.lasagnastack' / 'mlflow.db'}"
 )
+_FROZEN_MLFLOW_TRACKING_URI = str(Path.home() / ".lasagnastack" / "mlruns")
+
+
+def _get_mlflow_tracking_uri() -> str:
+    """Return the effective MLflow tracking URI.
+
+    Respects ``MLFLOW_TRACKING_URI`` when set. When running as a PyInstaller
+    frozen binary and no explicit URI is configured, falls back to the
+    file-based backend (``~/.lasagnastack/mlruns``) because the SQLite backend
+    requires alembic migration scripts that cannot be reliably bundled.
+
+    Returns:
+        MLflow tracking URI string.
+    """
+    if "MLFLOW_TRACKING_URI" in os.environ:
+        return os.environ["MLFLOW_TRACKING_URI"]
+    if getattr(sys, "_MEIPASS", None) is not None:
+        return _FROZEN_MLFLOW_TRACKING_URI
+    return _DEFAULT_MLFLOW_TRACKING_URI
 
 
 @dataclass
@@ -61,7 +81,7 @@ def _mlflow_run(
         Nothing; used purely for its side effect of tracking the wrapped block.
     """
     try:
-        tracking_uri = os.getenv("MLFLOW_TRACKING_URI", _DEFAULT_MLFLOW_TRACKING_URI)
+        tracking_uri = _get_mlflow_tracking_uri()
         mlflow.set_tracking_uri(tracking_uri)
         experiment_name = os.getenv("MLFLOW_EXPERIMENT_NAME", "lasagnastack")
         mlflow.set_experiment(experiment_name)
