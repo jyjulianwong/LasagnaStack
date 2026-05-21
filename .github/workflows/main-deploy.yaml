@@ -133,6 +133,7 @@ jobs:
           pyinstaller --onefile --name lasagnastack \
             --collect-all lasagnastack \
             --collect-data mlflow \
+            --collect-data pycapcut \
             src/lasagnastack/__main__.py
 
       - name: 📦 Package binary into tar.gz and compute sha256
