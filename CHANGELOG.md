@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.16 (2026-05-21)
+
+### Bug Fixes
+
+- Fixed missing PyCapCut files
+  ([`d676422`](https://github.com/jyjulianwong/LasagnaStack/commit/d676422a4e3025bd90b5910221c633674e24bc59))
+
+
 ## v1.0.15 (2026-05-21)
 
 ### Bug Fixes
