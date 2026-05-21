@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.14 (2026-05-21)
+
+### Bug Fixes
+
+- Fixed multiprocessing
+  ([`d6d012a`](https://github.com/jyjulianwong/LasagnaStack/commit/d6d012a3a646eedc6a5a2148e9d1033ab5d3877a))
+
+
 ## v1.0.13 (2026-05-20)
 
 ### Bug Fixes
