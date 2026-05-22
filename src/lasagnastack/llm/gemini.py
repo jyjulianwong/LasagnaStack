@@ -211,8 +211,21 @@ class GeminiClient(LLMClient):
 
     # ── internals ───────────────────────────────────────────────────────────
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=30),
+        before_sleep=lambda rs: log.warning(
+            "files_upload_retry",
+            attempt=rs.attempt_number,
+            error=str(rs.outcome.exception()) if rs.outcome else None,
+        ),
+    )
     def _upload_and_wait(self, path: Path) -> Any:
         """Upload a local file to the Gemini Files API and poll until ACTIVE.
+
+        Retries up to 3 times (with exponential back-off) if the Files API
+        returns a ``FAILED`` state, deleting the failed resource before each
+        retry to avoid leaking orphaned files.
 
         Args:
             path: Local path to the file to upload.
@@ -221,7 +234,8 @@ class GeminiClient(LLMClient):
             The active ``File`` resource returned by the Files API.
 
         Raises:
-            RuntimeError: If the file does not reach the ACTIVE state.
+            RuntimeError: If the file does not reach the ACTIVE state after all
+                retry attempts.
         """
         log.info(
             "files_upload_start",
@@ -246,6 +260,9 @@ class GeminiClient(LLMClient):
 
         state_name = getattr(getattr(file_ref, "state", None), "name", "UNKNOWN")
         if state_name not in {"ACTIVE", "UNKNOWN"}:
+            # Delete the failed resource before raising so tenacity can retry
+            # with a fresh upload and we don't leak orphaned Files API entries.
+            self._delete_file(file_ref.name)  # pyrefly: ignore[bad-argument-type]
             raise RuntimeError(
                 f"File {file_ref.name} did not reach ACTIVE state: {state_name}"
             )
