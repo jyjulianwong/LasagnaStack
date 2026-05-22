@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from lasagnastack.models.cut_list import CutList
-from lasagnastack.models.enhance import ReelStyle
+from lasagnastack.models.reel_pipeline.cut_list import CutList
+from lasagnastack.models.reel_pipeline.enhance import ReelStyleSheet
 
 
 class VideoEditorAdapter(ABC):
@@ -16,7 +16,7 @@ class VideoEditorAdapter(ABC):
         folder_name: str,
         display_name: str,
         input_dir: Path,
-        reel_style: ReelStyle | None = None,
+        reel_style_sheet: ReelStyleSheet | None = None,
     ) -> Path:
         """Translate cut_list into a draft project at draft_parent/folder_name.
 
@@ -26,7 +26,7 @@ class VideoEditorAdapter(ABC):
             folder_name: Name for the new draft subfolder.
             display_name: Human-readable project name written into the draft.
             input_dir: Folder containing original source clips.
-            reel_style: Optional visual styling from Stage 5.
+            reel_style_sheet: Optional visual styling from Stage 5.
 
         Returns:
             Path to the created draft folder.

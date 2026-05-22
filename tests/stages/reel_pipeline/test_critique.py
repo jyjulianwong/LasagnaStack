@@ -1,6 +1,6 @@
 from lasagnastack import io
-from lasagnastack.models.critique import CritiqueResult
-from lasagnastack.stages import critique
+from lasagnastack.models.reel_pipeline.critique import CritiqueResult
+from lasagnastack.stages.reel_pipeline import critique
 
 
 class TestBuildPrompt:
@@ -266,7 +266,7 @@ class TestRun:
                 created.append(self)
 
         monkeypatch.setattr(
-            "lasagnastack.stages.critique.GeminiClient", FakeGeminiClient
+            "lasagnastack.stages.reel_pipeline.critique.GeminiClient", FakeGeminiClient
         )
         critique.run(
             fixture_cut_list,

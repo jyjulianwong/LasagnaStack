@@ -9,8 +9,9 @@ from lasagnastack import io
 from lasagnastack.base import PipelineState, Stage
 from lasagnastack.llm.base import LLMClient
 from lasagnastack.llm.gemini import GeminiClient
-from lasagnastack.models.cut_list import CutList
-from lasagnastack.models.enhance import ReelStyle
+from lasagnastack.models.reel_pipeline.cut_list import CutList
+from lasagnastack.models.reel_pipeline.enhance import ReelStyleSheet
+from lasagnastack.reel_pipeline_state import ReelPipelineState
 
 log = structlog.get_logger()
 
@@ -21,10 +22,10 @@ def run(
     output_dir: Path,
     client: LLMClient | None = None,
     skill_path: Path | None = None,
-) -> ReelStyle:
+) -> ReelStyleSheet:
     """Generate visual styling for the approved cut list.
 
-    Sends the cut list and brief to the LLM and returns a ReelStyle describing
+    Sends the cut list and brief to the LLM and returns a ReelStyleSheet describing
     per-cut transition types and caption effects (colour, animation, etc.).
     Writes reel_style.json to output_dir.
 
@@ -37,7 +38,7 @@ def run(
             prompt before the creator brief.
 
     Returns:
-        A ReelStyle ready for the render stage.
+        A ReelStyleSheet ready for the render stage.
     """
     if client is None:
         client = GeminiClient()
@@ -46,11 +47,13 @@ def run(
     captioned = sum(1 for cut in cut_list.cuts if cut.caption)
     log.info("enhance_start", cuts=len(cut_list.cuts), captioned=captioned)
 
-    reel_style: ReelStyle = client.generate(prompt, ReelStyle, temperature=0.5)
+    reel_style_sheet: ReelStyleSheet = client.generate(
+        prompt, ReelStyleSheet, temperature=0.5
+    )
 
-    io.write_json(reel_style, io.reel_style_path(output_dir))
-    log.info("enhance_done", cut_styles=len(reel_style.cut_styles))
-    return reel_style
+    io.write_json(reel_style_sheet, io.reel_style_path(output_dir))
+    log.info("enhance_done", cut_styles=len(reel_style_sheet.cut_styles))
+    return reel_style_sheet
 
 
 def _build_prompt(
@@ -59,7 +62,7 @@ def _build_prompt(
     skill_path: Path | None = None,
 ) -> str:
     template = (
-        importlib.resources.files("lasagnastack.prompts")
+        importlib.resources.files("lasagnastack.prompts.reel_pipeline")
         .joinpath("enhance.md")
         .read_text(encoding="utf-8")
     )
@@ -90,17 +93,18 @@ class EnhanceStage(Stage):
             state: Current pipeline state. ``state.cut_list`` must be set.
 
         Returns:
-            Updated pipeline state with ``reel_style`` set.
+            Updated pipeline state with ``reel_style_sheet`` set.
         """
+        assert isinstance(state, ReelPipelineState)
         assert state.cut_list is not None
-        reel_style = run(
+        reel_style_sheet = run(
             state.cut_list,
             state.brief_path,
             state.output_dir,
             self._client,
             state.skill_path,
         )
-        return dataclasses.replace(state, reel_style=reel_style)
+        return dataclasses.replace(state, reel_style_sheet=reel_style_sheet)
 
     def completion_message(self, state: PipelineState) -> str:
         """Return the post-stage confirmation message.
@@ -111,7 +115,8 @@ class EnhanceStage(Stage):
         Returns:
             Human-readable completion string.
         """
-        rs = state.reel_style
+        assert isinstance(state, ReelPipelineState)
+        rs = state.reel_style_sheet
         assert rs is not None
         styled = sum(1 for cs in rs.cut_styles if cs.caption_effect is not None)
         return (

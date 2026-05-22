@@ -9,8 +9,9 @@ from lasagnastack import io
 from lasagnastack.base import PipelineState, Stage
 from lasagnastack.llm.base import LLMClient
 from lasagnastack.llm.gemini import GeminiClient
-from lasagnastack.models.cut_list import CutList
-from lasagnastack.models.inventory import ClipInventory
+from lasagnastack.models.reel_pipeline.cut_list import CutList
+from lasagnastack.models.reel_pipeline.inventory import ClipInventory
+from lasagnastack.reel_pipeline_state import ReelPipelineState
 
 log = structlog.get_logger()
 
@@ -57,7 +58,7 @@ def _build_prompt(
     skill_path: Path | None = None,
 ) -> str:
     template = (
-        importlib.resources.files("lasagnastack.prompts")
+        importlib.resources.files("lasagnastack.prompts.reel_pipeline")
         .joinpath("direct.md")
         .read_text(encoding="utf-8")
     )
@@ -75,6 +76,7 @@ class DirectStage(Stage):
         self._client = client
 
     def run(self, state: PipelineState) -> PipelineState:
+        assert isinstance(state, ReelPipelineState)
         assert state.inventories is not None
         cut_list = run(
             state.inventories,
@@ -86,6 +88,7 @@ class DirectStage(Stage):
         return dataclasses.replace(state, cut_list=cut_list)
 
     def completion_message(self, state: PipelineState) -> str:
+        assert isinstance(state, ReelPipelineState)
         cl = state.cut_list
         assert cl is not None
         return (

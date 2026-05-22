@@ -7,8 +7,9 @@ import structlog
 
 from lasagnastack import io
 from lasagnastack.base import PipelineState, Stage
-from lasagnastack.models.cut_list import CutList
-from lasagnastack.models.enhance import ReelStyle
+from lasagnastack.models.reel_pipeline.cut_list import CutList
+from lasagnastack.models.reel_pipeline.enhance import ReelStyleSheet
+from lasagnastack.reel_pipeline_state import ReelPipelineState
 from lasagnastack.video_editors.base import VideoEditorAdapter
 from lasagnastack.video_editors.pycapcut import PyCapCutAdapter
 
@@ -23,7 +24,7 @@ def run(
     output_dir: Path,
     input_dir: Path,
     adapter: VideoEditorAdapter | None = None,
-    reel_style: ReelStyle | None = None,
+    reel_style_sheet: ReelStyleSheet | None = None,
 ) -> Path:
     """Translate the final cut list into a video editor draft folder.
 
@@ -35,7 +36,7 @@ def run(
         output_dir: Pipeline root; draft created at output_dir/draft/.
         input_dir: Folder containing the original source clips.
         adapter: Video editor adapter to use. Defaults to PyCapCutAdapter.
-        reel_style: Optional visual styling from Stage 5.
+        reel_style_sheet: Optional visual styling from Stage 5.
 
     Returns:
         Path to the draft folder inside the editor app (or output_dir/draft/
@@ -53,7 +54,7 @@ def run(
     display_name = _draft_display_name(title, timestamp)
 
     draft_path = adapter.build_draft(
-        cut_list, draft_parent, folder_name, display_name, input_dir, reel_style
+        cut_list, draft_parent, folder_name, display_name, input_dir, reel_style_sheet
     )
     capcut_path = adapter.export(draft_path, input_dir, cut_list)
     final_path = capcut_path if capcut_path is not None else draft_path
@@ -150,13 +151,14 @@ class RenderStage(Stage):
         Returns:
             Updated pipeline state with ``draft_path`` set.
         """
+        assert isinstance(state, ReelPipelineState)
         assert state.cut_list is not None
         draft_path = run(
             state.cut_list,
             state.output_dir,
             state.input_dir,
             adapter=self._adapter,
-            reel_style=state.reel_style,
+            reel_style_sheet=state.reel_style_sheet,
         )
         return dataclasses.replace(state, draft_path=draft_path)
 

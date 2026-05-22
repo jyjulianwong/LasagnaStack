@@ -53,7 +53,7 @@ class OverlayStyle(BaseModel):
     """Text styling applied to this overlay."""
 
 
-class ReelStyle(BaseModel):
+class ReelStyleSheet(BaseModel):
     """Stage 5 output: visual styling and animation layer for the approved cut list."""
 
     cut_styles: list[CutStyle]

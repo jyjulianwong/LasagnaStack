@@ -7,15 +7,21 @@ import pytest
 from pydantic import BaseModel
 
 from lasagnastack.llm.base import LLMClient
-from lasagnastack.models.critique import CritiqueResult
-from lasagnastack.models.cut_list import CropHint, Cut, CutList, ReelMeta
-from lasagnastack.models.inventory import (
+from lasagnastack.models.optimize_skill_pipeline.skill import (
+    CritiqueSkillResult,
+    OptimizedSkill,
+)
+from lasagnastack.models.reel_pipeline.critique import CritiqueResult
+from lasagnastack.models.reel_pipeline.cut_list import CropHint, Cut, CutList, ReelMeta
+from lasagnastack.models.reel_pipeline.enhance import CutStyle, ReelStyleSheet
+from lasagnastack.models.reel_pipeline.inventory import (
     ClipAnalysisResponse,
     ClipInventory,
     NormalisedClip,
     OverallAssessment,
     Segment,
 )
+from lasagnastack.models.reel_pipeline.post_caption import PostCaption
 
 # ── MLflow isolation ────────────────────────────────────────────────────────
 
@@ -108,6 +114,31 @@ FIXTURE_CRITIQUE_REVISE = CritiqueResult(
     cut_list_v2=FIXTURE_CUT_LIST,
 )
 
+FIXTURE_REEL_STYLE_SHEET = ReelStyleSheet(
+    cut_styles=[CutStyle(cut_order=1, transition_out=None, caption_effect=None)],
+    overlay_styles=[],
+)
+
+FIXTURE_POST_CAPTION = PostCaption(
+    caption="Test caption for Instagram #foodie #london",
+)
+
+FIXTURE_OPTIMIZED_SKILL = OptimizedSkill(
+    skill_text="# Test Skill\nAlways use bold captions for hook cuts.",
+)
+
+FIXTURE_CRITIQUE_SKILL_APPROVED = CritiqueSkillResult(
+    verdict="approved",
+    issues=[],
+    skill_v2=None,
+)
+
+FIXTURE_CRITIQUE_SKILL_REVISE = CritiqueSkillResult(
+    verdict="revise",
+    issues=["Skill is too vague about transitions."],
+    skill_v2="# Improved Skill\nAlways specify dissolve for food reveals.",
+)
+
 
 class MockLLMClient(LLMClient):
     """Returns fixture data without making any real API calls.
@@ -136,6 +167,14 @@ class MockLLMClient(LLMClient):
             return FIXTURE_CUT_LIST
         if response_schema is CritiqueResult:
             return FIXTURE_CRITIQUE_APPROVED
+        if response_schema is ReelStyleSheet:
+            return FIXTURE_REEL_STYLE_SHEET
+        if response_schema is PostCaption:
+            return FIXTURE_POST_CAPTION
+        if response_schema is OptimizedSkill:
+            return FIXTURE_OPTIMIZED_SKILL
+        if response_schema is CritiqueSkillResult:
+            return FIXTURE_CRITIQUE_SKILL_APPROVED
         raise NotImplementedError(f"MockLLMClient: no fixture for {response_schema}")
 
     def generate_with_video(
@@ -206,7 +245,7 @@ def brief_path(tmp_path) -> Path:
 
 @pytest.fixture
 def fixture_normalised_clip(raw_clip, tmp_path) -> NormalisedClip:
-    from lasagnastack.stages.ingest import _normalise_clip
+    from lasagnastack.stages.reel_pipeline.ingest import _normalise_clip
 
     dest = tmp_path / "norm.mp4"
     duration = _normalise_clip(raw_clip, dest)
@@ -287,3 +326,48 @@ def raw_clip_with_audio(tmp_path_factory) -> Path:
         .run(quiet=True)
     )
     return out
+
+
+@pytest.fixture(scope="session")
+def fixture_reel_style_sheet() -> ReelStyleSheet:
+    return FIXTURE_REEL_STYLE_SHEET
+
+
+@pytest.fixture(scope="session")
+def fixture_post_caption() -> PostCaption:
+    return FIXTURE_POST_CAPTION
+
+
+@pytest.fixture(scope="session")
+def fixture_optimized_skill() -> OptimizedSkill:
+    return FIXTURE_OPTIMIZED_SKILL
+
+
+@pytest.fixture(scope="session")
+def fixture_critique_skill_approved() -> CritiqueSkillResult:
+    return FIXTURE_CRITIQUE_SKILL_APPROVED
+
+
+@pytest.fixture(scope="session")
+def fixture_critique_skill_revise() -> CritiqueSkillResult:
+    return FIXTURE_CRITIQUE_SKILL_REVISE
+
+
+@pytest.fixture
+def optimize_skill_state(
+    tmp_path, brief_path
+) -> "OptimizeSkillPipelineState":  # pyrefly: ignore[unknown-name] # noqa: F821
+    from lasagnastack.optimize_skill_pipeline_state import OptimizeSkillPipelineState
+
+    input_dir = tmp_path / "input"
+    input_dir.mkdir()
+    return OptimizeSkillPipelineState(
+        input_dir=input_dir,
+        output_dir=tmp_path / "output",
+        brief_path=brief_path,
+        skill_path=None,
+        critique_max_retries=2,
+        draft_cut_lists=[FIXTURE_CUT_LIST],
+        draft_reel_style_sheets=[FIXTURE_REEL_STYLE_SHEET],
+        optimized_skill_text="# Draft Skill\nInitial skill text.",
+    )

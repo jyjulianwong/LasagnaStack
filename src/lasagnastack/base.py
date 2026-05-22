@@ -11,11 +11,6 @@ import mlflow
 import mlflow.entities
 import structlog
 
-from lasagnastack.models.cut_list import CutList
-from lasagnastack.models.enhance import ReelStyle
-from lasagnastack.models.inventory import ClipInventory, NormalisedClip
-from lasagnastack.models.post_caption import PostCaption
-
 log = structlog.get_logger()
 
 _DEFAULT_MLFLOW_TRACKING_URI = (
@@ -43,20 +38,14 @@ def _get_mlflow_tracking_uri() -> str:
 
 
 @dataclass
-class PipelineState:
-    """Data and configuration threaded through all pipeline stages."""
+class PipelineState(ABC):
+    """Abstract base carrying configuration shared across all pipeline types."""
 
     input_dir: Path
     output_dir: Path
     brief_path: Path
     skill_path: Path | None = None
     critique_max_retries: int = 2
-    normalised_clips: list[NormalisedClip] | None = None
-    inventories: list[ClipInventory] | None = None
-    cut_list: CutList | None = None
-    reel_style: ReelStyle | None = None
-    draft_path: Path | None = None
-    post_caption: PostCaption | None = None
 
 
 @contextmanager

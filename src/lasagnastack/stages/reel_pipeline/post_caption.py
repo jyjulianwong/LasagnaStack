@@ -9,9 +9,10 @@ from lasagnastack import io
 from lasagnastack.base import PipelineState, Stage
 from lasagnastack.llm.base import LLMClient
 from lasagnastack.llm.gemini import GeminiClient
-from lasagnastack.models.cut_list import CutList
-from lasagnastack.models.inventory import ClipInventory
-from lasagnastack.models.post_caption import PostCaption
+from lasagnastack.models.reel_pipeline.cut_list import CutList
+from lasagnastack.models.reel_pipeline.inventory import ClipInventory
+from lasagnastack.models.reel_pipeline.post_caption import PostCaption
+from lasagnastack.reel_pipeline_state import ReelPipelineState
 
 log = structlog.get_logger()
 
@@ -67,7 +68,7 @@ def _build_prompt(
     skill_path: Path | None = None,
 ) -> str:
     template = (
-        importlib.resources.files("lasagnastack.prompts")
+        importlib.resources.files("lasagnastack.prompts.reel_pipeline")
         .joinpath("post_caption.md")
         .read_text(encoding="utf-8")
     )
@@ -111,6 +112,7 @@ class PostCaptionStage(Stage):
         Returns:
             Updated pipeline state with ``post_caption`` set.
         """
+        assert isinstance(state, ReelPipelineState)
         assert state.cut_list is not None
         assert state.inventories is not None
         post_caption = run(
