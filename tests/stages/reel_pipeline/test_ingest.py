@@ -7,7 +7,7 @@ import ffmpeg
 import pytest
 
 from lasagnastack.cache import DiskCache
-from lasagnastack.stages import ingest
+from lasagnastack.stages.reel_pipeline import ingest
 
 if TYPE_CHECKING:
     from _pytest.monkeypatch import MonkeyPatch

@@ -12,7 +12,8 @@ from lasagnastack import io
 from lasagnastack.base import PipelineState, Stage
 from lasagnastack.cache import DiskCache
 from lasagnastack.logging_config import configure_logging
-from lasagnastack.models.inventory import NormalisedClip
+from lasagnastack.models.reel_pipeline.inventory import NormalisedClip
+from lasagnastack.reel_pipeline_state import ReelPipelineState
 
 log = structlog.get_logger()
 
@@ -176,10 +177,12 @@ class IngestStage(Stage):
         self._max_workers = max_workers
 
     def run(self, state: PipelineState) -> PipelineState:
+        assert isinstance(state, ReelPipelineState)
         clips = run(state.input_dir, state.output_dir, max_workers=self._max_workers)
         return dataclasses.replace(state, normalised_clips=clips)
 
     def completion_message(self, state: PipelineState) -> str:
+        assert isinstance(state, ReelPipelineState)
         n = len(state.normalised_clips or [])
         return (
             f"Stage 1 complete — {n} clip(s) normalised. Continue to Stage 2 (analyse)?"

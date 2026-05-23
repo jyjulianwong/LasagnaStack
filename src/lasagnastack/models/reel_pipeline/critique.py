@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from lasagnastack.models.cut_list import CutList
+from lasagnastack.models.reel_pipeline.cut_list import CutList
 
 
 class CritiqueResult(BaseModel):

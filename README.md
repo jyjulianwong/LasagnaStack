@@ -75,11 +75,39 @@ export LSNSTK_LLM_OPENROUTER_API_KEY=your-key-here
 
 Skills are used to customise the pipeline to your own social media account's styles and branding, or use pre-written skills from marketplaces to cater for different types of reel content.
 
-A skill is a Markdown (`.md`) file that contains the prompt templates for the direct, critique, and enhance stages. The skill file is injected into the prompt templates for the direct, critique, and enhance stages.
+A skill is a Markdown (`.md`) file injected into the direct, critique, and enhance stage prompts. Pass one to the `make` command via the `--skill` flag:
 
-You can use your own skill file by passing the `--skill` CLI flag to the `make` command.
+```bash
+lasagnastack make ./my_clips/ --out ./my_output_folder/ --skill ./my_skill.md
+```
+
+### How to optimize a skill file
+
+The `optimize-skill` command analyses a folder of human-edited CapCut drafts (your "trainset") and generates an improved skill file, or writes a new one from scratch if you do not have an existing skill yet.
+
+```bash
+lasagnastack optimize-skill ./my_trainset/ --out ./skill_output/
+```
+
+To iteratively improve an existing skill file instead of starting from scratch:
+
+```bash
+lasagnastack optimize-skill ./my_trainset/ --out ./skill_output/ --skill ./my_skill.md
+```
+
+**`trainset` folder layout:** each subdirectory inside `TRAINSET_DIR` must be a CapCut draft folder containing a `draft_info.json` file (i.e. the raw output from a previous `lasagnastack make` run, after you have hand-edited the draft in CapCut Desktop and exported the project). The pipeline reads each draft, reconstructs the cut list and style decisions, and uses them as training examples for the LLM.
+
+The optimized skill file is written to `OUTPUT_DIR/optimized_skill.md`. Pass it to future `make` runs via `--skill`.
+
+### How to find skill files
+
+Visit the **[Skills Marketplace](https://drive.google.com/drive/folders/1zh-W5GCY0dGcGCGrH6uiw9fVGyl6sGOC?usp=sharing)** to download and use pre-written skills for different types of reel content. Skills are organised in the following folder structure: `[CATEGORY] - [AUTHOR_NAME SKILL_NAME (VERSION_TAG)]`
 
 ### How to use the CLI
+
+**`lasagnastack make`**
+
+Turn raw clips into a CapCut draft.
 
 ```
 usage: lasagnastack make [-h] --out OUTPUT_DIR [--skill SKILL_FILE] [--yes]
@@ -91,12 +119,31 @@ positional arguments:
 
 options:
   --out OUTPUT_DIR              Destination for the CapCut draft and working files
-  --skill SKILL_FILE            Path to Markdown skill file injected into the direct, 
+  --skill SKILL_FILE            Path to Markdown skill file injected into the direct,
                                 critique, and enhance prompt templates (optional)
   --yes, -y                     Auto-confirm all stage prompts
   --critique-max-retries N      Maximum # of critique loop retries (default: 2)
   --ingest-max-workers N        Maximum # of parallel worker processes for `ingest` stage (default: 2)
   --analyse-max-workers N       Maximum # of concurrent LLM calls for `analyse` stage (default: 4)
+```
+
+**`lasagnastack optimize-skill`**
+
+Generate or improve a skill file from human-edited drafts.
+
+```
+usage: lasagnastack optimize-skill [-h] --out OUTPUT_DIR [--skill SKILL_FILE]
+                                   [--yes] [--critique-max-retries N]
+                                   TRAINSET_DIR
+
+positional arguments:
+  TRAINSET_DIR                  Folder of CapCut draft subfolders (each must contain draft_info.json)
+
+options:
+  --out OUTPUT_DIR              Destination for optimized_skill.md and working files
+  --skill SKILL_FILE            Existing skill file to improve (omit to generate from scratch)
+  --yes, -y                     Auto-confirm all stage prompts
+  --critique-max-retries N      Maximum # of critique loop retries (default: 2)
 ```
 
 ### Opening the draft in CapCut Desktop (macOS)
@@ -185,7 +232,12 @@ uv run python -m lasagnastack make ./my_clips/ --out ./drafts/reel_2025_05_05 --
 
 ### Architecture
 
-Each stage is a subclass of the `Stage` abstract base class (`base.py`). Adding, removing, or reordering stages requires only editing the `stages` list in `ReelPipeline`. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for four annotated diagrams covering the pipeline data flow, the Stage 4 critique loop, the Stage 6 render + CapCut export, and the extensibility model.
+Two concrete pipelines share the same `Stage` / `Pipeline` / `PipelineState` base classes in `base.py`:
+
+- **`ReelPipeline`** (`reel_pipeline.py`) — the seven-stage clips-to-draft pipeline described above. Its state is `ReelPipelineState`.
+- **`OptimizeSkillPipeline`** (`optimize_skill_pipeline.py`) — a three-stage pipeline that reads a trainset of human-edited drafts and writes an improved skill file. Its state is `OptimizeSkillPipelineState`.
+
+Adding, removing, or reordering stages requires only editing the `stages` list on the relevant pipeline class. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for annotated diagrams covering the pipeline data flow, the Stage 4 critique loop, the Stage 6 render + CapCut export, and the extensibility model.
 
 ### Get started with Jupyter notebooks
 
@@ -242,7 +294,7 @@ Note that runs already stored in `~/.lasagnastack/mlflow.db` will not appear on 
 ## This repo is cool because...
 
 - The pipeline is modularlised into stages, with each stage being responsible for transforming the global state of the pipeline run (similar to LangGraph). It is easy to add, remove, or reorder stages.
-- The pipeline supports "skills" -- each user can write their own skill `.md` file to customise the pipeline to their own accounts' styles and branding, or use pre-written skills from marketplaces to cater for different types of reel content.
+- The pipeline supports "skills" -- each user can write their own skill `.md` file to customise the pipeline to their own accounts' styles and branding, or use pre-written skills from marketplaces to cater for different types of reel content. The `optimize-skill` command closes the loop: point it at a folder of your human-edited CapCut drafts and it generates an improved skill file automatically.
 - Chain-of-thought reasoning is supported for both Gemini and OpenRouter models, controlled per-client via `reasoning_max_tokens` (token budget), `reasoning_effort` (qualitative level, OpenRouter only), and `total_max_tokens` (total output ceiling, required for some Anthropic models).
 - Human-in-the-loop is deeply integrated in the design, with each stage prompting the user for confirmation before proceeding to the next stage.
 - Prompt caching is enabled to avoid unnecessary LLM calls to reduce latency and cost.

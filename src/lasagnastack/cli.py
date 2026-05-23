@@ -44,6 +44,35 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Concurrent LLM calls for Stage 2 — analyse (default: 4).",
     )
 
+    optimize = sub.add_parser(
+        "optimize-skill",
+        help="Analyse human-edited CapCut drafts and generate an improved skill file.",
+    )
+    optimize.add_argument(
+        "trainset_dir",
+        type=Path,
+        metavar="TRAINSET_DIR",
+        help="Folder containing CapCut draft subfolders (each must have draft_info.json).",
+    )
+    optimize.add_argument(
+        "--skill",
+        type=Path,
+        default=None,
+        metavar="SKILL_FILE",
+        help="Existing skill file to improve. Omit to generate from scratch.",
+    )
+    optimize.add_argument("--out", type=Path, required=True, metavar="OUTPUT_DIR")
+    optimize.add_argument(
+        "--yes", "-y", action="store_true", help="Auto-confirm all stage prompts."
+    )
+    optimize.add_argument(
+        "--critique-max-retries",
+        type=int,
+        default=2,
+        metavar="N",
+        help="Maximum critique-loop iterations (default: 2).",
+    )
+
     return parser
 
 
@@ -60,13 +89,13 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command == "make":
-        from lasagnastack.base import PipelineState
         from lasagnastack.llm import make_client
         from lasagnastack.llm.gemini import GeminiClient
         from lasagnastack.reel_pipeline import ReelPipeline, find_brief
+        from lasagnastack.reel_pipeline_state import ReelPipelineState
 
         brief_path = find_brief(args.input_dir)
-        state = PipelineState(
+        state = ReelPipelineState(
             input_dir=args.input_dir,
             output_dir=args.out,
             brief_path=brief_path,
@@ -101,5 +130,31 @@ def main() -> None:
                 reasoning_max_tokens=4000,
                 reasoning_effort="low",
                 total_max_tokens=12000,
+            ),
+        ).run(state, auto_confirm=args.yes)
+
+    elif args.command == "optimize-skill":
+        from lasagnastack.llm import make_client
+        from lasagnastack.optimize_skill_pipeline import (
+            OptimizeSkillPipeline,
+            build_state,
+        )
+
+        state = build_state(
+            trainset_dir=args.trainset_dir,
+            output_dir=args.out,
+            skill_path=args.skill,
+            critique_max_retries=args.critique_max_retries,
+        )
+        OptimizeSkillPipeline(
+            optimize_client=make_client(
+                reasoning_max_tokens=12000,
+                reasoning_effort="medium",
+                total_max_tokens=24000,
+            ),
+            critique_client=make_client(
+                reasoning_max_tokens=12000,
+                reasoning_effort="medium",
+                total_max_tokens=24000,
             ),
         ).run(state, auto_confirm=args.yes)

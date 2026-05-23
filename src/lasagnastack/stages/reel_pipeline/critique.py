@@ -9,9 +9,10 @@ from lasagnastack import io
 from lasagnastack.base import PipelineState, Stage
 from lasagnastack.llm.base import LLMClient
 from lasagnastack.llm.gemini import GeminiClient
-from lasagnastack.models.critique import CritiqueResult
-from lasagnastack.models.cut_list import CutList
-from lasagnastack.models.inventory import ClipInventory
+from lasagnastack.models.reel_pipeline.critique import CritiqueResult
+from lasagnastack.models.reel_pipeline.cut_list import CutList
+from lasagnastack.models.reel_pipeline.inventory import ClipInventory
+from lasagnastack.reel_pipeline_state import ReelPipelineState
 
 log = structlog.get_logger()
 
@@ -103,7 +104,7 @@ def _build_prompt(
     skill_path: Path | None = None,
 ) -> str:
     template = (
-        importlib.resources.files("lasagnastack.prompts")
+        importlib.resources.files("lasagnastack.prompts.reel_pipeline")
         .joinpath("critique.md")
         .read_text(encoding="utf-8")
     )
@@ -132,6 +133,7 @@ class CritiqueStage(Stage):
         self._client = client
 
     def run(self, state: PipelineState) -> PipelineState:
+        assert isinstance(state, ReelPipelineState)
         assert state.cut_list is not None
         assert state.inventories is not None
         cut_list = run(

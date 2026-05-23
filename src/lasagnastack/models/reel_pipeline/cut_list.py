@@ -72,7 +72,7 @@ class Cut(BaseModel):
     transition_out: str
     """Outgoing transition: none | cut | fade | dissolve.
 
-    May be overridden by ``ReelStyle.cut_styles`` at render time.
+    May be overridden by ``ReelStyleSheet.cut_styles`` at render time.
     """
     caption: Caption | None
     """Optional clip-scoped text overlay. Use ``CutList.overlays`` for text that spans multiple cuts."""

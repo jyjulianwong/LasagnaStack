@@ -6,8 +6,8 @@ import pytest
 from pycapcut import SEC
 
 from lasagnastack import io
-from lasagnastack.models.cut_list import Caption, CropHint
-from lasagnastack.stages import render
+from lasagnastack.models.reel_pipeline.cut_list import Caption, CropHint
+from lasagnastack.stages.reel_pipeline import render
 from lasagnastack.video_editors import pycapcut as _pycapcut
 
 _TS = "20260508_200844"

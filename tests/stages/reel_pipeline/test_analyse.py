@@ -1,5 +1,5 @@
-from lasagnastack.models.inventory import ClipInventory
-from lasagnastack.stages import analyse
+from lasagnastack.models.reel_pipeline.inventory import ClipInventory
+from lasagnastack.stages.reel_pipeline import analyse
 
 
 class TestLoadPrompt:
@@ -103,7 +103,7 @@ class TestRun:
                 created.append(self)
 
         monkeypatch.setattr(
-            "lasagnastack.stages.analyse.GeminiClient", FakeGeminiClient
-        )  # noqa: E501
+            "lasagnastack.stages.reel_pipeline.analyse.GeminiClient", FakeGeminiClient
+        )
         analyse.run([fixture_normalised_clip], tmp_path)
         assert len(created) == 1

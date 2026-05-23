@@ -25,8 +25,12 @@ from pycapcut import (
 )
 from pycapcut.text_segment import TextBorder
 
-from lasagnastack.models.cut_list import CropHint, CutList
-from lasagnastack.models.enhance import CaptionEffect, CutStyle, ReelStyle
+from lasagnastack.models.reel_pipeline.cut_list import CropHint, CutList
+from lasagnastack.models.reel_pipeline.enhance import (
+    CaptionEffect,
+    CutStyle,
+    ReelStyleSheet,
+)
 from lasagnastack.video_editors.base import VideoEditorAdapter
 
 log = structlog.get_logger()
@@ -47,7 +51,7 @@ class PyCapCutAdapter(VideoEditorAdapter):
         folder_name: str,
         display_name: str,
         input_dir: Path,
-        reel_style: ReelStyle | None = None,
+        reel_style_sheet: ReelStyleSheet | None = None,
     ) -> Path:
         """Build a CapCut draft folder from the cut list.
 
@@ -57,14 +61,14 @@ class PyCapCutAdapter(VideoEditorAdapter):
             folder_name: Name for the new draft subfolder.
             display_name: Human-readable project name written into draft_info.json.
             input_dir: Folder containing original source clips.
-            reel_style: Optional per-cut visual styling from Stage 5.
+            reel_style_sheet: Optional per-cut visual styling from Stage 5.
 
         Returns:
             Path to the created draft folder.
         """
         style_map: dict[int, CutStyle] = {}
-        if reel_style:
-            style_map = {cs.cut_order: cs for cs in reel_style.cut_styles}
+        if reel_style_sheet:
+            style_map = {cs.cut_order: cs for cs in reel_style_sheet.cut_styles}
 
         script = DraftFolder(str(draft_parent)).create_draft(
             folder_name, _DRAFT_WIDTH, _DRAFT_HEIGHT, _DRAFT_FPS, allow_replace=True
@@ -154,10 +158,10 @@ class PyCapCutAdapter(VideoEditorAdapter):
             timeline_pos += target_duration_us
 
         overlay_style_map: dict[int, CaptionEffect] = {}
-        if reel_style:
+        if reel_style_sheet:
             overlay_style_map = {
                 ov_style_entry.overlay_index: ov_style_entry.caption_effect
-                for ov_style_entry in reel_style.overlay_styles
+                for ov_style_entry in reel_style_sheet.overlay_styles
             }
 
         for idx, overlay in enumerate(cut_list.overlays):

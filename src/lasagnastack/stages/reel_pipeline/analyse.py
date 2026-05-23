@@ -10,11 +10,12 @@ from lasagnastack.base import PipelineState, Stage
 from lasagnastack.cache import DiskCache
 from lasagnastack.llm.base import LLMClient
 from lasagnastack.llm.gemini import GeminiClient
-from lasagnastack.models.inventory import (
+from lasagnastack.models.reel_pipeline.inventory import (
     ClipAnalysisResponse,
     ClipInventory,
     NormalisedClip,
 )
+from lasagnastack.reel_pipeline_state import ReelPipelineState
 
 log = structlog.get_logger()
 
@@ -107,7 +108,7 @@ def _analyse_clip(
 
 def _load_prompt(source_file: str, duration_sec: float) -> str:
     template = (
-        importlib.resources.files("lasagnastack.prompts")
+        importlib.resources.files("lasagnastack.prompts.reel_pipeline")
         .joinpath("analyse.md")
         .read_text(encoding="utf-8")
     )
@@ -126,6 +127,7 @@ class AnalyseStage(Stage):
         self._max_workers = max_workers
 
     def run(self, state: PipelineState) -> PipelineState:
+        assert isinstance(state, ReelPipelineState)
         assert state.normalised_clips is not None
         inventories = run(
             state.normalised_clips,
@@ -136,6 +138,7 @@ class AnalyseStage(Stage):
         return dataclasses.replace(state, inventories=inventories)
 
     def completion_message(self, state: PipelineState) -> str:
+        assert isinstance(state, ReelPipelineState)
         invs = state.inventories or []
         total = sum(len(inv.segments) for inv in invs)
         return (

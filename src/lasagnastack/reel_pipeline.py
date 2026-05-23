@@ -5,15 +5,16 @@ from pathlib import Path
 import structlog
 
 from lasagnastack import io
-from lasagnastack.base import Pipeline, PipelineState, Stage
+from lasagnastack.base import Pipeline, Stage
 from lasagnastack.llm.base import LLMClient
-from lasagnastack.stages.analyse import AnalyseStage
-from lasagnastack.stages.critique import CritiqueStage
-from lasagnastack.stages.direct import DirectStage
-from lasagnastack.stages.enhance import EnhanceStage
-from lasagnastack.stages.ingest import IngestStage
-from lasagnastack.stages.post_caption import PostCaptionStage
-from lasagnastack.stages.render import RenderStage
+from lasagnastack.reel_pipeline_state import ReelPipelineState
+from lasagnastack.stages.reel_pipeline.analyse import AnalyseStage
+from lasagnastack.stages.reel_pipeline.critique import CritiqueStage
+from lasagnastack.stages.reel_pipeline.direct import DirectStage
+from lasagnastack.stages.reel_pipeline.enhance import EnhanceStage
+from lasagnastack.stages.reel_pipeline.ingest import IngestStage
+from lasagnastack.stages.reel_pipeline.post_caption import PostCaptionStage
+from lasagnastack.stages.reel_pipeline.render import RenderStage
 
 log = structlog.get_logger()
 
@@ -92,7 +93,9 @@ class ReelPipeline(Pipeline):
             PostCaptionStage(client=self._post_caption_client),
         ]
 
-    def run(self, state: PipelineState, auto_confirm: bool = False) -> PipelineState:
+    def run(  # pyrefly: ignore[override, bad-override]
+        self, state: ReelPipelineState, auto_confirm: bool = False
+    ) -> ReelPipelineState:
         """Run all seven stages, then log and print the completion summary.
 
         Delegates the core orchestration to ``Pipeline.run()`` and appends a
@@ -108,12 +111,13 @@ class ReelPipeline(Pipeline):
             Final pipeline state after all stages complete.
         """
         state = super().run(state, auto_confirm=auto_confirm)
+        assert isinstance(state, ReelPipelineState)
         log.info("pipeline_complete", draft=str(state.draft_path))
         print(f"\nDraft saved to: {state.draft_path}")
         print(f"Post caption saved to: {io.post_caption_path(state.output_dir)}")
         return state
 
-    def _mlflow_run_name(self, state: PipelineState) -> str:
+    def _mlflow_run_name(self, state: ReelPipelineState) -> str:  # type: ignore[override]
         """Return the MLflow run name, prefixed with ``lasagnastack``.
 
         Args:
@@ -124,7 +128,7 @@ class ReelPipeline(Pipeline):
         """
         return f"lasagnastack-{state.brief_path.stem}-{uuid.uuid4().hex[:4]}"
 
-    def _mlflow_tags(self, state: PipelineState) -> dict[str, str]:
+    def _mlflow_tags(self, state: ReelPipelineState) -> dict[str, str]:  # type: ignore[override]
         """Extend base tags with the active Gemini model name.
 
         Args:
