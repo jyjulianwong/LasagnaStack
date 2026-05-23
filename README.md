@@ -99,6 +99,10 @@ lasagnastack optimize-skill ./my_trainset/ --out ./skill_output/ --skill ./my_sk
 
 The optimized skill file is written to `OUTPUT_DIR/optimized_skill.md`. Pass it to future `make` runs via `--skill`.
 
+### How to find skill files
+
+Visit the **[Skills Marketplace](https://drive.google.com/drive/folders/1zh-W5GCY0dGcGCGrH6uiw9fVGyl6sGOC?usp=sharing)** to download and use pre-written skills for different types of reel content. Skills are organised in the following folder structure: `[CATEGORY] - [AUTHOR_NAME SKILL_NAME (VERSION_TAG)]`
+
 ### How to use the CLI
 
 **`lasagnastack make`**
