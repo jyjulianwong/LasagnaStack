@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.0.17 (2026-05-23)
+
+### Bug Fixes
+
+- Added automated prompt optimization feature
+  ([#13](https://github.com/jyjulianwong/LasagnaStack/pull/13),
+  [`37ce042`](https://github.com/jyjulianwong/LasagnaStack/commit/37ce0425e9c3a523401da93cdcaee0211d6d1013))
+
+
 ## v1.0.16 (2026-05-21)
 
 ### Bug Fixes
