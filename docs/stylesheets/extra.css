@@ -546,7 +546,7 @@ body::before {
 
 .ls-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 1rem;
   margin: 1.5rem 0;
 }
@@ -604,6 +604,14 @@ body::before {
   margin: 0;
   font-size: 0.85rem;
   color: var(--md-default-fg-color--light);
+}
+
+/* Tablet range: a steady 2-up grid, instead of letting auto-fit squeeze in
+   an odd 3-across row of cramped cards right before the desktop layout. */
+@media screen and (min-width: 37.5em) and (max-width: 59.9375em) {
+  .ls-grid--bento {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 /* Bento layout (home): bookend tiles spanning 2 cols, four supporting tiles */

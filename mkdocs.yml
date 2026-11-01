@@ -6,7 +6,7 @@ repo_url: https://github.com/jyjulianwong/lasagnastack
 nav:
   - Home: index.md
   - Architecture: ARCHITECTURE.md
-  - API Reference: reference/
+  - API Reference: reference/lasagnastack/
 
 theme:
   name: material

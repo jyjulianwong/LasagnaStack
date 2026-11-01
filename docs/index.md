@@ -15,7 +15,7 @@ manual editing.
 
 <div class="ls-hero__actions" markdown>
 [Get started](#get-started-with-development){ .md-button .md-button--primary }
-[API reference](reference/){ .md-button }
+[API reference](reference/lasagnastack/){ .md-button }
 </div>
 
 [![Tech stack](https://skillicons.dev/icons?i=py,githubactions,apple)](https://skillicons.dev){ .ls-hero__stack }
