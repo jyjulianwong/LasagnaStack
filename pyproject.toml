@@ -73,7 +73,8 @@ exclude = [
     "build",
     "dist",
     "__pycache__",
-    "*.ipynb"
+    "*.ipynb",
+    ".claude"
 ]
 fix = true
 

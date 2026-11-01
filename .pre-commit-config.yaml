@@ -38,6 +38,7 @@ repos:
         language: system
         stages: [pre-commit]
         files: \.py$
+        exclude: ^\.claude/
 
   - repo: https://github.com/antonbabenko/pre-commit-terraform
     rev: v1.86.0

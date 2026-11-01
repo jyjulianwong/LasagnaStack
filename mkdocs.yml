@@ -2,7 +2,6 @@ site_name: LasagnaStack
 site_description: An AI pipeline that turns raw video clips into an editable CapCut project for short-form reel editing.
 repo_name: jyjulianwong/lasagnastack
 repo_url: https://github.com/jyjulianwong/lasagnastack
-edit_uri: edit/main/
 
 nav:
   - Home: index.md
@@ -11,20 +10,23 @@ nav:
 
 theme:
   name: material
+  font:
+    text: Plus Jakarta Sans
+    code: JetBrains Mono
   logo: lasagna.png
   favicon: lasagna.png
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: indigo
-      accent: indigo
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: indigo
-      accent: indigo
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -34,9 +36,12 @@ theme:
     - navigation.tabs
     - navigation.top
     - navigation.footer
+    - navigation.sections
     - search.suggest
     - content.code.copy
-    - content.action.edit
+
+extra_css:
+  - stylesheets/extra.css
 
 plugins:
   - search
@@ -69,6 +74,9 @@ markdown_extensions:
   - toc:
       permalink: true
   - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite

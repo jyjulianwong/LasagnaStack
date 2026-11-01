@@ -30,6 +30,7 @@ The pipeline runs in seven sequential stages:
 
 ---
 
+<!-- --8<-- [start:docs-body] -->
 ## For users...
 
 ### Installation
@@ -290,6 +291,7 @@ MLFLOW_TRACKING_URI=http://your-mlflow-server:5001
 Note that runs already stored in `~/.lasagnastack/mlflow.db` will not appear on a remote server — the two stores are independent.
 
 ---
+<!-- --8<-- [end:docs-body] -->
 
 ## This repo is cool because...
 

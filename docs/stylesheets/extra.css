@@ -1,0 +1,772 @@
+/* ---------------------------------------------------------------------- */
+/* LasagnaStack docs — "Trattoria Glass" theme                             */
+/*                                                                         */
+/* Design system (ui-ux-pro-max): Glassmorphism + Aurora UI + Bento grid.  */
+/* A slow-moving tomato/amber/cheese aurora sits behind everything; the    */
+/* header, sidebars, article, cards and code blocks are frosted-glass      */
+/* panels (backdrop blur + hairline border + inner highlight) floating on  */
+/* top of it. Text contrast is kept >= 4.5:1 by using fairly opaque glass  */
+/* under body copy.                                                        */
+/* ---------------------------------------------------------------------- */
+
+:root {
+  --ls-amber: #f59e0b;
+  --ls-amber-bright: #fb923c;
+  --ls-amber-dim: #b45309;
+  --ls-tomato: #ef4444;
+  --ls-gold: #facc15;
+
+  --glass-blur: 18px;
+  --glass-radius: 20px;
+  --ls-radius: 12px;
+  --ls-ease: 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ----- Palette --------------------------------------------------------- */
+
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: #0c0705;
+  --md-default-fg-color: #f6ebe0;
+  --md-default-fg-color--light: #d2bba6;
+  --md-default-fg-color--lighter: #a3876f;
+  --md-default-fg-color--lightest: rgba(255, 255, 255, 0.08);
+
+  --md-primary-fg-color: #140b08;
+  --md-primary-bg-color: #fdf3e8;
+
+  --md-accent-fg-color: var(--ls-amber-bright);
+  --md-accent-fg-color--transparent: rgba(251, 146, 60, 0.14);
+  --md-typeset-a-color: var(--ls-amber-bright);
+
+  --md-code-bg-color: rgba(0, 0, 0, 0.38);
+  --md-code-fg-color: #ecdccb;
+
+  --md-footer-bg-color: transparent;
+  --md-footer-bg-color--dark: transparent;
+  --md-footer-fg-color: var(--md-default-fg-color);
+  --md-footer-fg-color--light: var(--md-default-fg-color--light);
+  --md-footer-fg-color--lighter: var(--md-default-fg-color--lighter);
+
+  /* glass tokens */
+  --glass-bg: rgba(255, 255, 255, 0.055);
+  --glass-bg-strong: rgba(24, 14, 10, 0.5);
+  --glass-border: rgba(255, 255, 255, 0.11);
+  --glass-highlight: rgba(255, 255, 255, 0.14);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --ls-border: rgba(251, 146, 60, 0.22);
+  --aurora-a: rgba(239, 68, 68, 0.6);
+  --aurora-b: rgba(245, 158, 11, 0.65);
+  --aurora-c: rgba(250, 204, 21, 0.35);
+  --aurora-d: rgba(251, 113, 133, 0.28);
+}
+
+[data-md-color-scheme="default"] {
+  --md-default-bg-color: #fdf6ec;
+  --md-default-fg-color: #2d170c;
+  --md-default-fg-color--light: #5c4433;
+  --md-default-fg-color--lighter: #80654f;
+  --md-default-fg-color--lightest: rgba(45, 23, 12, 0.09);
+
+  --md-primary-fg-color: #140b08;
+  --md-primary-bg-color: #fdf3e8;
+
+  --md-accent-fg-color: var(--ls-amber-dim);
+  --md-accent-fg-color--transparent: rgba(180, 83, 9, 0.1);
+  --md-typeset-a-color: #9a3412;
+
+  --md-code-bg-color: rgba(45, 23, 12, 0.06);
+  --md-code-fg-color: #3a2314;
+
+  --md-footer-bg-color: transparent;
+  --md-footer-bg-color--dark: transparent;
+  --md-footer-fg-color: var(--md-default-fg-color);
+  --md-footer-fg-color--light: var(--md-default-fg-color--light);
+  --md-footer-fg-color--lighter: var(--md-default-fg-color--lighter);
+
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-bg-strong: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.8);
+  --glass-highlight: rgba(255, 255, 255, 0.9);
+  --glass-shadow: 0 8px 32px rgba(120, 53, 15, 0.12);
+  --ls-border: rgba(180, 83, 9, 0.2);
+  --aurora-a: rgba(248, 113, 113, 0.55);
+  --aurora-b: rgba(251, 191, 36, 0.6);
+  --aurora-c: rgba(253, 224, 71, 0.45);
+  --aurora-d: rgba(251, 113, 133, 0.3);
+}
+
+/* ----- Aurora backdrop ------------------------------------------------- */
+
+body {
+  background-color: var(--md-default-bg-color);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: -20vmax;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(38vmax 30vmax at 12% 28%, var(--aurora-a), transparent 70%),
+    radial-gradient(36vmax 30vmax at 88% 18%, var(--aurora-b), transparent 70%),
+    radial-gradient(40vmax 32vmax at 70% 85%, var(--aurora-c), transparent 70%),
+    radial-gradient(34vmax 28vmax at 20% 90%, var(--aurora-d), transparent 70%),
+    radial-gradient(30vmax 24vmax at 50% 50%, var(--aurora-b), transparent 75%);
+  animation: aurora-drift 28s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes aurora-drift {
+  from { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  to   { transform: translate3d(3vmax, -2vmax, 0) rotate(6deg) scale(1.08); }
+}
+
+/* Let the aurora show through Material's containers */
+.md-main,
+.md-container,
+.md-content {
+  background: transparent;
+}
+
+/* ----- Glass mixin (applied via a shared selector list) ------------------ */
+
+.md-header,
+.md-tabs,
+.md-content__inner,
+.ls-card,
+.md-typeset .admonition,
+.md-typeset details,
+.md-typeset .highlight,
+.md-typeset table:not([class]),
+.md-search__form,
+.md-search__output {
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+}
+
+/* ----- Header + tabs: one floating glass bar ----------------------------- */
+
+.md-header,
+.md-tabs {
+  background: var(--glass-bg-strong);
+  color: var(--md-default-fg-color);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: none;
+}
+
+.md-header {
+  box-shadow: 0 1px 0 var(--glass-highlight) inset, var(--glass-shadow);
+}
+
+.md-tabs {
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.md-header__title,
+.md-header__button,
+.md-header .md-icon,
+.md-tabs__link,
+.md-search__icon,
+.md-header__option {
+  color: var(--md-default-fg-color);
+}
+
+.md-tabs__link {
+  opacity: 0.7;
+  transition: opacity var(--ls-ease), color var(--ls-ease);
+}
+
+.md-tabs__link:hover,
+.md-tabs__link--active {
+  opacity: 1;
+  color: var(--md-accent-fg-color);
+}
+
+.md-header__button.md-logo img {
+  filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.6));
+}
+
+.md-search__form {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  transition: border-color var(--ls-ease), background var(--ls-ease);
+}
+
+.md-search__form:hover,
+.md-search__form:focus-within {
+  border-color: var(--ls-border);
+  background: var(--glass-bg-strong);
+}
+
+.md-search__input,
+.md-search__input::placeholder {
+  color: var(--md-default-fg-color--light);
+}
+
+.md-search__output {
+  border-radius: 0 0 var(--glass-radius) var(--glass-radius);
+}
+
+/* ----- Article as a glass sheet ----------------------------------------- */
+
+.md-content__inner {
+  margin: 1.5rem 0.8rem 3rem;
+  padding: 1.5rem 2rem 2.5rem;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  box-shadow: 0 1px 0 var(--glass-highlight) inset, var(--glass-shadow);
+}
+
+.md-content__inner::before {
+  display: none; /* Material's spacer */
+}
+
+/* The home page is a full-bleed hero: no sheet */
+.md-content__inner:has(.ls-hero) {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  padding: 0;
+  margin: 0 0.8rem 3rem;
+}
+
+/* ----- Sidebars: nav + TOC as quiet glass rails -------------------------- */
+
+@media screen and (min-width: 76.25em) {
+  .md-sidebar--primary .md-sidebar__scrollwrap,
+  .md-sidebar--secondary .md-sidebar__scrollwrap {
+    margin-top: 1.5rem;
+    padding: 0.6rem 0.4rem;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--glass-radius);
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    backdrop-filter: blur(var(--glass-blur));
+    max-height: calc(100vh - 11rem);
+    height: auto !important;
+  }
+
+  .md-sidebar--primary,
+  .md-sidebar--secondary {
+    height: auto !important;
+  }
+}
+
+/* Material paints opaque title/fade backgrounds that read as black boxes on glass */
+.md-sidebar label.md-nav__link {
+  box-shadow: none !important;
+  background: none !important;
+}
+
+.md-sidebar label.md-nav__link--active {
+  box-shadow: none !important;
+  background: var(--md-accent-fg-color--transparent) !important;
+}
+
+/* Material pins several different elements to the top of a scrolling nav
+   panel (the section .md-nav__title, and - when navigation.sections lifts
+   an active section whose own entry has no children to list below it -
+   the active item's .md-nav__link itself) and gives each one a halo sized
+   to the page background so scrolled content doesn't show through. On our
+   translucent glass sidebar that halo is opaque and reads as a solid
+   black box, so every sticky variant needs it stripped. */
+.md-sidebar .md-nav__title,
+.md-sidebar .md-nav__title[for],
+.md-sidebar .md-nav--secondary .md-nav__title,
+.md-sidebar .md-nav--primary > .md-nav__title,
+.md-sidebar .md-nav--lifted > .md-nav__list > .md-nav__item--active > .md-nav__link {
+  background: none !important;
+  box-shadow: none !important;
+}
+
+.md-nav__title::after,
+.md-sidebar__scrollwrap::after {
+  display: none;
+}
+
+.md-nav__link {
+  border-radius: 8px;
+  padding: 0.25rem 0.5rem;
+  transition: color var(--ls-ease), background var(--ls-ease);
+}
+
+.md-nav__link:hover {
+  background: var(--md-accent-fg-color--transparent);
+}
+
+.md-nav__item .md-nav__link--active {
+  font-weight: 600;
+  color: var(--md-accent-fg-color);
+  background: var(--md-accent-fg-color--transparent);
+}
+
+.md-nav__title {
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--md-default-fg-color--lighter);
+}
+
+/* ----- Typography -------------------------------------------------------- */
+
+.md-typeset {
+  font-size: 0.8rem;
+  line-height: 1.75;
+}
+
+.md-typeset h1,
+.md-typeset h2 {
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.md-typeset h1 {
+  background: linear-gradient(120deg, var(--ls-tomato), var(--ls-amber-bright) 55%, var(--ls-gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+[data-md-color-scheme="default"] .md-typeset h1 {
+  background-image: linear-gradient(120deg, #b91c1c, #c2410c 60%, #a16207);
+}
+
+/* The permalink glyph inherits the transparent gradient fill; keep it off h1 */
+.md-typeset h1 .headerlink {
+  display: none;
+}
+
+.md-typeset h2 {
+  margin-top: 2.4em;
+  padding-bottom: 0.35em;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.md-typeset blockquote {
+  border-left: 3px solid var(--ls-amber);
+  background: var(--md-accent-fg-color--transparent);
+  border-radius: 0 var(--ls-radius) var(--ls-radius) 0;
+  padding: 0.4rem 1rem;
+  margin: 1.2em 0;
+}
+
+.md-typeset hr {
+  border-bottom: 1px solid var(--glass-border);
+}
+
+/* ----- Code ----------------------------------------------------------------- */
+
+.md-typeset code {
+  font-size: 0.85em;
+  border-radius: 6px;
+}
+
+.md-typeset .highlight {
+  background: var(--md-code-bg-color);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--ls-radius);
+  box-shadow: 0 1px 0 var(--glass-highlight) inset;
+}
+
+.md-typeset pre > code {
+  background: transparent;
+  border-radius: var(--ls-radius);
+}
+
+.md-typeset .tabbed-set {
+  border-radius: var(--ls-radius);
+}
+
+.md-typeset .tabbed-labels > label {
+  transition: color var(--ls-ease);
+}
+
+/* ----- Tables ------------------------------------------------------------- */
+
+.md-typeset table:not([class]) {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--ls-radius);
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.md-typeset table:not([class]) th {
+  background: var(--md-accent-fg-color--transparent);
+  color: var(--md-default-fg-color);
+  font-weight: 600;
+}
+
+.md-typeset table:not([class]) td,
+.md-typeset table:not([class]) th {
+  border-color: var(--glass-border);
+}
+
+/* ----- Admonitions ---------------------------------------------------------- */
+
+.md-typeset .admonition,
+.md-typeset details {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-left-width: 3px;
+  border-radius: var(--ls-radius);
+  box-shadow: 0 1px 0 var(--glass-highlight) inset;
+}
+
+/* ----- Footer --------------------------------------------------------------- */
+
+.md-footer,
+.md-footer-meta {
+  background: transparent;
+}
+
+.md-footer__link {
+  border-radius: var(--ls-radius);
+  transition: background var(--ls-ease);
+}
+
+.md-footer__link:hover {
+  background: var(--glass-bg);
+  opacity: 1;
+}
+
+.md-footer,
+.md-footer-meta,
+.md-footer__title,
+.md-footer__direction,
+.md-copyright,
+.md-copyright a {
+  color: var(--md-default-fg-color--light);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Hero (docs/index.md)                                                    */
+/* ---------------------------------------------------------------------- */
+
+.ls-hero {
+  position: relative;
+  margin: 1.5rem 0 1.5rem;
+  padding: 5rem 1.5rem 4rem;
+  text-align: center;
+  overflow: hidden;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 28px;
+  box-shadow: 0 1px 0 var(--glass-highlight) inset, var(--glass-shadow);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+}
+
+/* Top-left specular light source */
+.ls-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(60% 80% at 0% 0%, rgba(255, 255, 255, 0.16), transparent 60%);
+}
+
+.ls-hero__logo {
+  width: 112px;
+  border-radius: 24px;
+  height: auto;
+  margin-bottom: 1.25rem;
+  filter: drop-shadow(0 0 24px rgba(245, 158, 11, 0.6));
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.ls-hero h1 {
+  font-size: 2.9rem;
+  line-height: 1.1;
+  margin: 0 auto 1rem;
+  max-width: 24ch;
+  text-wrap: balance;
+}
+
+.ls-hero h1 .headerlink {
+  display: none;
+}
+
+.ls-hero p {
+  font-size: 1.1rem;
+  max-width: 50ch;
+  margin: 0 auto;
+  color: var(--md-default-fg-color--light);
+}
+
+.ls-hero__actions {
+  margin-top: 2.2rem;
+  text-align: center;
+}
+
+.ls-hero__actions .md-button {
+  margin: 0.375rem;
+  padding: 0.55em 1.25em;
+  font-size: 0.75rem;
+  border-radius: 999px;
+  display: inline-block;
+  width: 10.5rem;
+  text-align: center;
+  color: var(--md-default-fg-color);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  transition: transform var(--ls-ease), background var(--ls-ease), filter var(--ls-ease);
+}
+
+.ls-hero__actions .md-button:hover {
+  background: var(--glass-bg-strong);
+  border-color: var(--ls-border);
+  color: var(--md-default-fg-color);
+}
+
+.ls-hero__actions .md-button--primary {
+  background: linear-gradient(120deg, var(--ls-tomato), var(--ls-amber));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 6px 24px rgba(245, 158, 11, 0.45);
+}
+
+.ls-hero__actions .md-button--primary:hover {
+  background: linear-gradient(120deg, var(--ls-tomato), var(--ls-amber));
+  color: #fff;
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+
+/* ----- Bento / feature grid ------------------------------------------------- */
+
+.ls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.ls-card {
+  position: relative;
+  padding: 1.4rem 1.5rem;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  box-shadow: 0 1px 0 var(--glass-highlight) inset;
+  transition: transform var(--ls-ease), border-color var(--ls-ease), background var(--ls-ease), box-shadow var(--ls-ease);
+}
+
+.ls-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--ls-border);
+  background: var(--glass-bg-strong);
+  box-shadow: 0 1px 0 var(--glass-highlight) inset, 0 12px 40px rgba(245, 158, 11, 0.22);
+}
+
+.ls-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  margin-bottom: 0.9rem;
+  font-size: 1.4rem;
+  border-radius: 12px;
+  color: var(--md-accent-fg-color);
+  background: var(--md-accent-fg-color--transparent);
+  border: 1px solid var(--ls-border);
+}
+
+.ls-card__icon .twemoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ls-card__icon svg {
+  width: 1.4rem;
+  height: 1.4rem;
+  fill: currentColor;
+}
+
+.ls-card h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.ls-card p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--md-default-fg-color--light);
+}
+
+/* Bento layout (home): bookend tiles spanning 2 cols, four supporting tiles */
+@media screen and (min-width: 60em) {
+  .ls-grid--bento {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .ls-grid--bento > .ls-card:nth-child(1) {
+    grid-column: span 2;
+    padding: 2rem;
+    background:
+      radial-gradient(90% 70% at 0% 0%, rgba(239, 68, 68, 0.22), transparent 70%),
+      var(--glass-bg);
+  }
+
+  .ls-grid--bento > .ls-card:nth-child(1) h3 {
+    font-size: 1.5rem;
+  }
+
+  .ls-grid--bento > .ls-card:nth-child(1) p {
+    font-size: 1rem;
+  }
+
+  .ls-grid--bento > .ls-card:nth-child(6) {
+    grid-column: span 2;
+    padding: 2rem;
+    background:
+      radial-gradient(90% 70% at 100% 0%, rgba(245, 158, 11, 0.22), transparent 70%),
+      var(--glass-bg);
+  }
+
+  .ls-grid--bento > .ls-card:nth-child(6) h3 {
+    font-size: 1.5rem;
+  }
+
+  .ls-grid--bento > .ls-card:nth-child(6) p {
+    font-size: 1rem;
+  }
+}
+
+/* ----- Language pills ------------------------------------------------------- */
+
+.ls-pill {
+  display: inline-block;
+  padding: 0.15rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: var(--md-accent-fg-color--transparent);
+  color: var(--md-accent-fg-color);
+  border: 1px solid var(--ls-border);
+}
+
+/* ----- Responsive ----------------------------------------------------------- */
+
+@media screen and (max-width: 76.1875em) {
+  .md-content__inner {
+    margin: 1rem 0.4rem 2rem;
+    padding: 1rem 1.1rem 1.8rem;
+    border-radius: 16px;
+  }
+}
+
+@media screen and (max-width: 44.9375em) {
+  .ls-hero {
+    padding: 3rem 1rem 2.5rem;
+    border-radius: 20px;
+  }
+
+  .ls-hero h1 {
+    font-size: 1.9rem;
+  }
+}
+
+@media screen and (max-width: 22.5em) {
+  .ls-hero h1 {
+    font-size: 1.6rem;
+  }
+}
+
+/* ----- Accessibility -------------------------------------------------------- */
+
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--ls-amber-bright);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* No blur support → fall back to opaque panels so text stays legible */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --glass-bg: rgba(24, 14, 10, 0.92);
+    --glass-bg-strong: rgba(24, 14, 10, 0.96);
+  }
+
+  [data-md-color-scheme="default"] {
+    --glass-bg: rgba(255, 255, 255, 0.92);
+    --glass-bg-strong: rgba(255, 255, 255, 0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  body::before {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+
+  .ls-card:hover,
+  .ls-hero__actions .md-button--primary:hover {
+    transform: none;
+  }
+}
+
+/* ----- API reference (mkdocstrings) ----------------------------------------- */
+
+.doc-heading code,
+.md-typeset .doc-heading {
+  font-family: var(--md-code-font-family);
+}
+
+.md-typeset .doc-contents {
+  margin-left: 0.2rem;
+}
+
+.md-typeset .doc-symbol {
+  border-radius: 6px;
+}
+
+.md-typeset .ls-sheet {
+  margin: 0 0 3rem;
+  padding: 1.5rem 2rem 2.5rem;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  box-shadow: 0 1px 0 var(--glass-highlight) inset, var(--glass-shadow);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+}
+
+@media screen and (max-width: 44.9375em) {
+  .md-typeset .ls-sheet {
+    padding: 1rem 1.1rem 1.8rem;
+    border-radius: 16px;
+  }
+}
+
+.ls-hero__stack img {
+  height: 40px;
+  margin: 1.8rem 0.1rem 0;
+  border-radius: 10px;
+}
