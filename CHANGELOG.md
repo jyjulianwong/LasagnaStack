@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.0.18 (2026-11-01)
+
+### Bug Fixes
+
+- **docs**: Repair API Reference link and bento grid at tablet widths
+  ([`77cebf4`](https://github.com/jyjulianwong/LasagnaStack/commit/77cebf4475cc2187caed1a45919c610a5fc39457))
+
+### Documentation
+
+- Aurora glassmorphism redesign with bento home
+  ([`ba76231`](https://github.com/jyjulianwong/LasagnaStack/commit/ba76231b043eabcba40a0bc0762dcfbb471c451c))
+
+
 ## v1.0.17 (2026-05-23)
 
 ### Bug Fixes
