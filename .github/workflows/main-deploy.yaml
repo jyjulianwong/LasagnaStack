@@ -48,10 +48,17 @@ jobs:
       contents: write
       packages: write
     steps:
+      # token: the default GITHUB_TOKEN authenticates as github-actions[bot],
+      # which never holds the Admin role branch_ruleset.tf (Infrastructure-GitHub)
+      # exempts from its "no direct pushes to main" rule — semantic-release's
+      # internal git push (which reuses the credential this checkout sets up)
+      # needs an actual admin-role token to clear that rule, same as that
+      # repo's own GH_ADMIN_TOKEN.
       - name: ⚙️ Set up repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0  # important for tags
+          token: ${{ secrets.GH_ADMIN_TOKEN }}
 
       - name: ⚙️ Set up Python
         uses: actions/setup-python@v4
