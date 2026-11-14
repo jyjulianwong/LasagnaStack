@@ -53,12 +53,12 @@ jobs:
       # exempts from its "no direct pushes to main" rule — semantic-release's
       # internal git push (which reuses the credential this checkout sets up)
       # needs an actual admin-role token to clear that rule, same as that
-      # repo's own GH_ADMIN_TOKEN.
+      # repo's own GITHUB_ADMIN_TOKEN.
       - name: ⚙️ Set up repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0  # important for tags
-          token: ${{ secrets.GH_ADMIN_TOKEN }}
+          token: ${{ secrets.GITHUB_ADMIN_TOKEN }}
 
       - name: ⚙️ Set up Python
         uses: actions/setup-python@v4
