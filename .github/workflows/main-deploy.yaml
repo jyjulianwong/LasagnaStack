@@ -193,7 +193,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: jyjulianwong/homebrew-lasagnastack
-          token: ${{ secrets.TAP_GITHUB_TOKEN }}
+          token: ${{ secrets.GH_TAP_TOKEN }}
           path: tap
 
       - name: ✏️ Update formula for binary distribution
