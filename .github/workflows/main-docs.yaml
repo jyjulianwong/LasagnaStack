@@ -14,8 +14,21 @@ permissions:
   contents: read
 
 jobs:
+  scan-vulnerabilities:
+    name: Scan Vulnerabilities
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   # Build the documentation and upload the static HTML files as an artifact.
   build:
+    needs: scan-vulnerabilities
     environment: google-cloud
     runs-on: ubuntu-latest
     steps:
