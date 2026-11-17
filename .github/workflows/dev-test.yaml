@@ -11,7 +11,20 @@ permissions:
   id-token: write
 
 jobs:
+  scan-vulnerabilities:
+    name: Scan Vulnerabilities
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Scan for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   unit_test:
+    needs: scan-vulnerabilities
     runs-on: ubuntu-latest
     steps:
       - name: ⚙️ Set up repository
