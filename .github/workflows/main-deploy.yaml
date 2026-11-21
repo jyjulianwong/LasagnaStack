@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  scan-vulnerabilities:
-    name: Scan Vulnerabilities
+  security-scan:
+    name: Security scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -22,8 +22,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  unit_test:
-    needs: scan-vulnerabilities
+  unit-test:
+    needs: security-scan
     runs-on: ubuntu-latest
     steps:
       - name: ⚙️ Set up repository
@@ -50,8 +50,8 @@ jobs:
         run: |
           uv run pytest tests/ -v
   
-  version_bump:
-    needs: unit_test
+  version-bump:
+    needs: unit-test
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.psr.outputs.version }}
@@ -91,9 +91,9 @@ jobs:
           echo "Tag:       ${{ steps.psr.outputs.tag }}"
           echo "Released:  ${{ steps.psr.outputs.released }}"
 
-  publish_pypi:
-    needs: version_bump
-    if: needs.version_bump.outputs.released == 'true'
+  publish-pypi:
+    needs: version-bump
+    if: needs.version-bump.outputs.released == 'true'
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -103,7 +103,7 @@ jobs:
       - name: ⚙️ Set up repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.version_bump.outputs.tag }}
+          ref: ${{ needs.version-bump.outputs.tag }}
 
       - name: ⚙️ Set up Python
         uses: actions/setup-python@v5
@@ -119,9 +119,9 @@ jobs:
       - name: 🚀 Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
 
-  build_binaries:
-    needs: [version_bump, publish_pypi]
-    if: needs.version_bump.outputs.released == 'true'
+  build-binaries:
+    needs: [version-bump, publish-pypi]
+    if: needs.version-bump.outputs.released == 'true'
     strategy:
       matrix:
         include:
@@ -136,7 +136,7 @@ jobs:
       - name: ⚙️ Check out repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.version_bump.outputs.tag }}
+          ref: ${{ needs.version-bump.outputs.tag }}
 
       - name: ⚙️ Set up Python 3.12
         uses: actions/setup-python@v5
@@ -164,7 +164,7 @@ jobs:
           ARCH_LABEL="${{ matrix.arch }}"
           if [ "$ARCH_LABEL" = "arm64" ]; then ARCH_LABEL="silicon"; fi
           if [ "$ARCH_LABEL" = "x86_64" ]; then ARCH_LABEL="intel"; fi
-          TARBALL="lasagnastack-${{ needs.version_bump.outputs.version }}-macos-${ARCH_LABEL}.tar.gz"
+          TARBALL="lasagnastack-${{ needs.version-bump.outputs.version }}-macos-${ARCH_LABEL}.tar.gz"
           tar -czf "$TARBALL" -C dist lasagnastack
           SHA256=$(shasum -a 256 "$TARBALL" | awk '{print $1}')
           echo "tarball=${TARBALL}" >> "$GITHUB_OUTPUT"
@@ -174,7 +174,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${{ needs.version_bump.outputs.tag }}" \
+          gh release upload "${{ needs.version-bump.outputs.tag }}" \
             "${{ steps.package.outputs.tarball }}" \
             --clobber
 
@@ -187,9 +187,9 @@ jobs:
           name: sha256-${{ matrix.arch }}
           path: sha256-${{ matrix.arch }}.txt
 
-  update_homebrew:
-    needs: [version_bump, build_binaries]
-    if: needs.version_bump.outputs.released == 'true'
+  update-homebrew:
+    needs: [version-bump, build-binaries]
+    if: needs.version-bump.outputs.released == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: ⬇️ Download arm64 sha256
@@ -211,8 +211,8 @@ jobs:
 
       - name: ✏️ Update formula for binary distribution
         env:
-          VERSION: ${{ needs.version_bump.outputs.version }}
-          TAG: ${{ needs.version_bump.outputs.tag }}
+          VERSION: ${{ needs.version-bump.outputs.version }}
+          TAG: ${{ needs.version-bump.outputs.tag }}
         run: |
           python3 - << 'PYEOF'
           import re, pathlib, os
@@ -285,5 +285,5 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Formula/lasagnastack.rb
           git diff --cached --quiet && exit 0
-          git commit -m "chore: bump lasagnastack to ${{ needs.version_bump.outputs.version }}"
+          git commit -m "chore: bump lasagnastack to ${{ needs.version-bump.outputs.version }}"
           git push

@@ -14,8 +14,8 @@ permissions:
   contents: read
 
 jobs:
-  scan-vulnerabilities:
-    name: Scan Vulnerabilities
+  security-scan:
+    name: Security scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,7 +28,7 @@ jobs:
 
   # Build the documentation and upload the static HTML files as an artifact.
   build:
-    needs: scan-vulnerabilities
+    needs: security-scan
     environment: google-cloud
     runs-on: ubuntu-latest
     steps:
